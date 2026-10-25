@@ -10,7 +10,7 @@
 - Solo existe la ruta `GET /`; frontend vacío (`index.html` y `estilosGlobales.css` en 0 líneas).
 - `requirements.txt` y `.gitignore` creados; `.env` no versionado.
 - `database.py` movido a `legacy/database.py` (no se usa).
-- Repo Git aún no inicializado.
+- Repo Git inicializado y sincronizado con `origin/main` en GitHub (Luis-Alejandro-18/Veterinaria_Modular).
 
 ## Decisiones (y por qué)
 - SQLAlchemy como única vía de conexión: evita duplicidad; `database.py` con psycopg2 quedó en `legacy/`.
@@ -27,7 +27,6 @@
 - En PowerShell, invocar el venv con `& "...\.venv\Scripts\python.exe" "script.py"`.
 
 ## Próximos pasos
-- Inicializar Git y subir a GitHub (`.gitignore` ya listo).
 - Diseñar endpoints de triaje, registro y mapa.
 - Crear `triage.html` y `mapa.html` + estilos en `estilosGlobales.css`.
 - Integrar Leaflet/Google Maps para clínicas 24/7.

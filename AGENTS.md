@@ -16,7 +16,7 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 - `database.py` movido a `legacy/database.py` (fuera del flujo activo; no se usa).
 - `.gitignore` creado (excluye `.env`, `.venv/`, `__pycache__/`, etc.).
 - `requirements.txt` generado.
-- Repo de Git aún no inicializado.
+- Repo Git inicializado y publicado en GitHub (`origin/main`).
 
 ## Base de datos
 - Motor: PostgreSQL con extensión PostGIS (SRID 4326 para coordenadas GPS).
