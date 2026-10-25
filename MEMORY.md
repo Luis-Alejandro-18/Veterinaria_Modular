@@ -10,6 +10,7 @@
 - Solo existe la ruta `GET /`; frontend vacío (`index.html` y `estilosGlobales.css` en 0 líneas).
 - `requirements.txt` y `.gitignore` creados; `.env` no versionado.
 - `README.md` con instrucciones de instalación, configuración y estructura creado.
+- `CONTRIBUTING.md` con el flujo de ramas, commits y PRs creado.
 - `database.py` movido a `legacy/database.py` (no se usa).
 - Repo Git inicializado y sincronizado con `origin/main` en GitHub (Luis-Alejandro-18/Veterinaria_Modular).
 
