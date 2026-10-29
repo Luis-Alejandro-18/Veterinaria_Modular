@@ -40,10 +40,24 @@ def veterinario_required(view):
     return wrapped_view
 
 
+def puede_ver_consulta(consulta):
+    """Un veterinario ve todas las consultas; un dueño solo las de sus mascotas."""
+    usuario = getattr(g, 'usuario', None)
+    if usuario is None:
+        return False
+    return usuario.rol == 'veterinario' or consulta.mascota.usuario_id == usuario.id
+
+
+def ruta_fisica_evidencia(evidencia):
+    """Devuelve la ruta privada en disco de una evidencia, sin permitir traversal."""
+    nombre = os.path.basename(evidencia.ruta_archivo)
+    return os.path.join(current_app.config['UPLOAD_FOLDER'], nombre)
+
+
 def eliminar_evidencias_de_consulta(consulta):
     """Elimina del disco las evidencias de una consulta antes de borrarla en BD."""
     for evidencia in consulta.evidencias:
-        ruta = os.path.join(current_app.static_folder, evidencia.ruta_archivo)
+        ruta = ruta_fisica_evidencia(evidencia)
         if os.path.exists(ruta):
             os.remove(ruta)
 

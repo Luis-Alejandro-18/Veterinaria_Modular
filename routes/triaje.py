@@ -1,15 +1,19 @@
+import mimetypes
 import os
 from uuid import uuid4
 
-from flask import (Blueprint, current_app, flash, g, redirect, render_template,
-                   request, url_for)
+from flask import (Blueprint, abort, current_app, flash, g, redirect,
+                   render_template, request, send_from_directory, url_for)
 from PIL import Image, UnidentifiedImageError
+from sqlalchemy import or_
 from werkzeug.utils import secure_filename
 
-from constants import ESTADOS_CONSULTA, ESTADO_CERRADA, TRANSICIONES_ESTADO
+from constants import (ESTADOS_CONSULTA, ESTADO_CERRADA, NIVELES_URGENCIA,
+                       TRANSICIONES_ESTADO)
 from data.primeros_auxilios import obtener_guia
 from models import Consulta, Evidencia, Mascota, RespuestaOrientacion, db
-from routes.utils import login_required, veterinario_required
+from routes.utils import (login_required, puede_ver_consulta,
+                          ruta_fisica_evidencia, veterinario_required)
 
 triaje_bp = Blueprint('triaje', __name__, url_prefix='/triaje')
 
@@ -40,15 +44,41 @@ def clasificar_urgencia(sintomas):
 @triaje_bp.route('/')
 @login_required
 def lista():
-    if g.usuario.rol == 'veterinario':
-        consultas = Consulta.query.order_by(Consulta.fecha_creacion.desc()).all()
-    else:
-        consultas = (Consulta.query
-                     .join(Mascota)
-                     .filter(Mascota.usuario_id == g.usuario.id)
-                     .order_by(Consulta.fecha_creacion.desc())
-                     .all())
-    return render_template('triaje/lista.html', consultas=consultas)
+    q = request.args.get('q', '').strip()
+    estado = request.args.get('estado', '').strip()
+    urgencia = request.args.get('urgencia', '').strip()
+    if estado not in ESTADOS_CONSULTA:
+        estado = ''
+    if urgencia not in NIVELES_URGENCIA:
+        urgencia = ''
+    pagina = max(request.args.get('page', 1, type=int) or 1, 1)
+
+    consultas_query = Consulta.query.join(Mascota)
+    if g.usuario.rol != 'veterinario':
+        consultas_query = consultas_query.filter(Mascota.usuario_id == g.usuario.id)
+    if q:
+        like = f'%{q}%'
+        consultas_query = consultas_query.filter(
+            or_(Mascota.nombre.ilike(like), Consulta.sintomas.ilike(like))
+        )
+    if estado:
+        consultas_query = consultas_query.filter(Consulta.estado == estado)
+    if urgencia:
+        consultas_query = consultas_query.filter(Consulta.nivel_urgencia == urgencia)
+
+    paginacion = (consultas_query
+                  .order_by(Consulta.fecha_creacion.desc())
+                  .paginate(page=pagina, per_page=10, error_out=False))
+    return render_template(
+        'triaje/lista.html',
+        consultas=paginacion.items,
+        paginacion=paginacion,
+        q=q,
+        estado=estado,
+        urgencia=urgencia,
+        estados=ESTADOS_CONSULTA,
+        niveles=NIVELES_URGENCIA,
+    )
 
 
 @triaje_bp.route('/nueva', methods=['GET', 'POST'])
@@ -92,7 +122,7 @@ def nueva():
 @login_required
 def detalle(consulta_id):
     consulta = Consulta.query.get_or_404(consulta_id)
-    if g.usuario.rol != 'veterinario' and consulta.mascota.usuario_id != g.usuario.id:
+    if not puede_ver_consulta(consulta):
         flash('No tienes permiso para ver esta consulta.', 'error')
         return redirect(url_for('triaje.lista'))
     return render_template(
@@ -101,6 +131,30 @@ def detalle(consulta_id):
         guia=obtener_guia(consulta.nivel_urgencia),
         estados_disponibles=TRANSICIONES_ESTADO.get(consulta.estado, ()),
     )
+
+
+@triaje_bp.route('/evidencia/<int:evidencia_id>')
+@login_required
+def ver_evidencia(evidencia_id):
+    evidencia = Evidencia.query.get_or_404(evidencia_id)
+    if not puede_ver_consulta(evidencia.consulta):
+        abort(404)
+
+    nombre = os.path.basename(evidencia.ruta_archivo)
+    ruta = ruta_fisica_evidencia(evidencia)
+    if not os.path.isfile(ruta):
+        abort(404)
+
+    mimetype = mimetypes.guess_type(nombre)[0] or 'application/octet-stream'
+    respuesta = send_from_directory(
+        current_app.config['UPLOAD_FOLDER'],
+        nombre,
+        mimetype=mimetype,
+        conditional=True,
+    )
+    respuesta.headers['Cache-Control'] = 'private, no-store'
+    respuesta.headers['X-Content-Type-Options'] = 'nosniff'
+    return respuesta
 
 
 @triaje_bp.route('/<int:consulta_id>/evidencia', methods=['POST'])

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block title %}Solicitud inválida — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <h1>Solicitud inválida</h1>
+  <p>La sesión expiró o el formulario no es válido. Recarga la página e inténtalo de nuevo.</p>
+  <a class="btn btn-primary" href="{{ url_for('index') }}">Volver al inicio</a>
+</div>
+{% endblock %}

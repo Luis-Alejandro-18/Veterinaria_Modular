@@ -111,6 +111,34 @@ h1 { margin-top: 0; }
   background: white;
 }
 
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.filters input,
+.filters select {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+}
+.filters input[type="search"] { flex: 1 1 240px; }
+.filters input[type="text"] { flex: 1 1 180px; }
+
+.pagination {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.pagination span { color: var(--muted); font-size: 0.9rem; }
+
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 
 .table {

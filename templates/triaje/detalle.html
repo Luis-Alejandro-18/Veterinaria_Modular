@@ -37,9 +37,9 @@
     {% for evidencia in consulta.evidencias %}
       <li>
         {% if evidencia.tipo == 'imagen' %}
-          <img src="{{ url_for('static', filename=evidencia.ruta_archivo) }}" alt="Evidencia de la consulta" class="evidence-img">
+          <img src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}" alt="Evidencia de la consulta" class="evidence-img">
         {% else %}
-          <video src="{{ url_for('static', filename=evidencia.ruta_archivo) }}" controls class="evidence-video"></video>
+          <video src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}" controls class="evidence-video"></video>
         {% endif %}
         <small>{{ evidencia.fecha_subida|local_time }}</small>
       </li>
@@ -53,6 +53,7 @@
   <h2>Subir evidencia</h2>
   <form method="post" action="{{ url_for('triaje.subir_evidencia', consulta_id=consulta.id) }}"
         enctype="multipart/form-data" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="file" name="archivo" accept="image/*,video/*" required>
     <button type="submit" class="btn">Subir</button>
   </form>
@@ -74,6 +75,7 @@
   {% if estados_disponibles %}
     <h2>Responder</h2>
     <form method="post" action="{{ url_for('triaje.responder', consulta_id=consulta.id) }}" class="form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Mensaje de orientación
         <textarea name="mensaje" rows="4" required></textarea>
       </label>
@@ -82,6 +84,7 @@
 
     <h2>Cambiar estado</h2>
     <form method="post" action="{{ url_for('triaje.cambiar_estado', consulta_id=consulta.id) }}" class="form-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <select name="estado">
         {% for estado in estados_disponibles %}
           <option value="{{ estado }}">{{ estado }}</option>

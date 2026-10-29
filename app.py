@@ -3,7 +3,8 @@ import os
 from datetime import timedelta, timezone
 
 from dotenv import load_dotenv
-from flask import Flask, g, jsonify, render_template, request
+from flask import Flask, abort, g, jsonify, render_template, request
+from flask_wtf.csrf import CSRFError, CSRFProtect
 from sqlalchemy import text
 
 from models import db  # Instancia de la base de datos de nuestros modelos
@@ -12,6 +13,7 @@ from models import db  # Instancia de la base de datos de nuestros modelos
 load_dotenv()
 
 app = Flask(__name__)
+csrf = CSRFProtect()
 
 # Configuración de conexión a PostgreSQL
 DB_USER = os.getenv("DB_USER", "postgres")
@@ -24,7 +26,7 @@ DB_NAME = os.getenv("DB_NAME", "veterinaria_db")
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "dev-secret-key")
-app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
+app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -34,6 +36,9 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Inicializamos la base de datos con la aplicación
 db.init_app(app)
+
+# Protección CSRF para formularios POST
+csrf.init_app(app)
 
 # Crear las tablas al iniciar el servidor (si no existen)
 with app.app_context():
@@ -82,6 +87,10 @@ app.register_blueprint(mapa_bp)
 
 @app.before_request
 def before_request():
+    # Las evidencias nuevas viven fuera de static; bloquea cualquier archivo
+    # antiguo que haya quedado en static/uploads.
+    if request.path.startswith('/static/uploads/'):
+        abort(404)
     # Evita consultar la BD por cada archivo estático
     if request.endpoint == 'static':
         return
@@ -108,6 +117,15 @@ def not_found(error):
 @app.errorhandler(413)
 def request_entity_too_large(error):
     return render_template('errors/413.html'), 413
+
+
+@app.errorhandler(CSRFError)
+def csrf_error(error):
+    if not hasattr(g, 'usuario'):
+        load_logged_in_user()
+    if request.path.startswith('/clinicas'):
+        return jsonify({'error': 'Solicitud inválida.'}), 400
+    return render_template('errors/400.html'), 400
 
 
 @app.errorhandler(500)
