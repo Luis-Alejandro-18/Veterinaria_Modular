@@ -73,11 +73,29 @@ python seed_clinicas.py --force
 
 > Los datos son ficticios y solo sirven para la demo académica. No deben usarse para emergencias reales.
 
+## Primeros auxilios y estados de la consulta
+
+- Cada consulta muestra una guía orientativa de primeros auxilios según el nivel de urgencia (`Leve`, `Moderado`, `Urgente`). No sustituye la valoración de un veterinario.
+- Transiciones permitidas:
+  - `Pendiente` → `En Atención`, `Requiere Presencial` o `Cerrada`
+  - `En Atención` → `Requiere Presencial` o `Cerrada`
+  - `Requiere Presencial` → `En Atención` o `Cerrada`
+  - `Cerrada` → sin cambios
+- Una consulta cerrada no acepta nuevas respuestas ni evidencias.
+
+## Tests
+
+```bash
+python -m pytest -q
+```
+
+`tests/conftest.py` crea automáticamente la base `veterinaria_db_test` (a partir de `DB_NAME`) y reinicia sus tablas en cada prueba. Requiere PostgreSQL/PostGIS y permisos para crear bases. No usa la base de desarrollo.
+
 ## Estado actual
 
 - Backend Flask con 6 tablas: `usuarios`, `mascotas`, `clinicas`, `consultas`, `evidencias`, `respuestas_orientacion`.
 - Endpoints de autenticación, mascotas, triaje y mapa implementados (Blueprints en `routes/`).
-- Fase 1 completada: borrado en cascada con limpieza de archivos, veterinario responsable, hora local, cédula sin bloqueo, seed de clínicas y páginas 404/413/500.
+- Fases 1 y 2 completadas: borrado en cascada con limpieza de archivos, veterinario responsable, hora local, cédula sin bloqueo, seed de clínicas, páginas 404/413/500, guía de primeros auxilios, transiciones de estado validadas y tests smoke con pytest.
 - Frontend básico con plantillas Jinja2 y estilos; mapa con Leaflet.
 - Sin migraciones: las tablas se crean con `db.create_all()` al iniciar.
 
@@ -86,8 +104,12 @@ python seed_clinicas.py --force
 ```
 app.py               # Servidor Flask y configuración de la BD
 models.py            # Modelos SQLAlchemy + GeoAlchemy2
+constants.py         # Roles, niveles de urgencia y estados
+data/                # Contenido de primeros auxilios
 seed_clinicas.py     # Datos de ejemplo para el mapa
 routes/              # Blueprints (auth, mascotas, triaje, mapa)
+tests/               # Pruebas smoke (base de datos separada)
+pytest.ini           # Configuración de pytest
 requirements.txt     # Dependencias
 templates/           # Plantillas Jinja2 (incluye errors/)
 static/css/          # Estilos

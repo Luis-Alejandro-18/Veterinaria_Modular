@@ -144,6 +144,21 @@ h1 { margin-top: 0; }
 .pre-wrap { white-space: pre-wrap; }
 .response { border-left: 4px solid var(--accent); }
 
+.first-aid { border-left: 5px solid var(--warning); background: #fffbeb; }
+.first-aid h2 { margin-top: 0; }
+.first-aid ol { margin: 0.5rem 0 0.75rem 1.25rem; padding: 0; }
+.first-aid li { margin-bottom: 0.35rem; }
+.first-aid-warning { color: #92400e; font-size: 0.9rem; font-weight: 700; }
+.first-aid-urgente { border-left-color: var(--danger); background: #fef2f2; }
+.first-aid-urgente h2,
+.first-aid-urgente .first-aid-warning { color: #991b1b; }
+.first-aid-moderado { border-left-color: var(--warning); background: #fffbeb; }
+.first-aid-moderado h2,
+.first-aid-moderado .first-aid-warning { color: #92400e; }
+.first-aid-leve { border-left-color: var(--success); background: #f0fdf4; }
+.first-aid-leve h2,
+.first-aid-leve .first-aid-warning { color: #166534; }
+
 .evidence-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem; }
 .evidence-list li { display: flex; flex-direction: column; gap: 0.35rem; }
 .evidence-img { max-width: 220px; border-radius: 8px; border: 1px solid var(--border); }

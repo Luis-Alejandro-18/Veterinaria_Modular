@@ -20,6 +20,17 @@
   <p class="pre-wrap">{{ consulta.sintomas }}</p>
 </div>
 
+<div class="card first-aid first-aid-{{ (consulta.nivel_urgencia or 'Leve')|lower }}">
+  <h2>{{ guia.titulo }}</h2>
+  <p>{{ guia.resumen }}</p>
+  <ol>
+    {% for paso in guia.pasos %}
+      <li>{{ paso }}</li>
+    {% endfor %}
+  </ol>
+  <p class="first-aid-warning">{{ guia.advertencia }}</p>
+</div>
+
 <h2>Evidencias</h2>
 {% if consulta.evidencias %}
   <ul class="evidence-list">
@@ -38,7 +49,7 @@
   <p>Sin evidencias.</p>
 {% endif %}
 
-{% if consulta.mascota.usuario_id == usuario_actual.id %}
+{% if consulta.mascota.usuario_id == usuario_actual.id and estados_disponibles %}
   <h2>Subir evidencia</h2>
   <form method="post" action="{{ url_for('triaje.subir_evidencia', consulta_id=consulta.id) }}"
         enctype="multipart/form-data" class="form-inline">
@@ -60,22 +71,26 @@
 {% endif %}
 
 {% if usuario_actual.rol == 'veterinario' %}
-  <h2>Responder</h2>
-  <form method="post" action="{{ url_for('triaje.responder', consulta_id=consulta.id) }}" class="form">
-    <label>Mensaje de orientación
-      <textarea name="mensaje" rows="4" required></textarea>
-    </label>
-    <button type="submit" class="btn btn-primary">Enviar respuesta</button>
-  </form>
+  {% if estados_disponibles %}
+    <h2>Responder</h2>
+    <form method="post" action="{{ url_for('triaje.responder', consulta_id=consulta.id) }}" class="form">
+      <label>Mensaje de orientación
+        <textarea name="mensaje" rows="4" required></textarea>
+      </label>
+      <button type="submit" class="btn btn-primary">Enviar respuesta</button>
+    </form>
 
-  <h2>Cambiar estado</h2>
-  <form method="post" action="{{ url_for('triaje.cambiar_estado', consulta_id=consulta.id) }}" class="form-inline">
-    <select name="estado">
-      {% for estado in ['Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada'] %}
-        <option value="{{ estado }}" {% if consulta.estado == estado %}selected{% endif %}>{{ estado }}</option>
-      {% endfor %}
-    </select>
-    <button type="submit" class="btn">Actualizar</button>
-  </form>
+    <h2>Cambiar estado</h2>
+    <form method="post" action="{{ url_for('triaje.cambiar_estado', consulta_id=consulta.id) }}" class="form-inline">
+      <select name="estado">
+        {% for estado in estados_disponibles %}
+          <option value="{{ estado }}">{{ estado }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn">Actualizar</button>
+    </form>
+  {% else %}
+    <p>La consulta está cerrada. No se pueden enviar más respuestas ni cambiar el estado.</p>
+  {% endif %}
 {% endif %}
 {% endblock %}
