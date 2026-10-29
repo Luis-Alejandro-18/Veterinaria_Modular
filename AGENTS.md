@@ -8,8 +8,8 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 
 ## Entrypoint y ejecución
 - Archivo principal: `app.py` (Flask). Ejecutar: `python app.py` desde la raíz del repo con el venv activo (`.venv\Scripts\activate` en Windows).
-- `requirements.txt` existe (Flask, Flask-SQLAlchemy, GeoAlchemy2, Pillow, psycopg2-binary, etc.).
-- No hay tests ni CI.
+- `requirements.txt` existe (Flask, Flask-SQLAlchemy, GeoAlchemy2, Pillow, psycopg2-binary, pytest, etc.).
+- Tests smoke con pytest (`python -m pytest -q`); sin CI.
 - Rutas organizadas en Blueprints dentro de `routes/`: `auth.py`, `mascotas.py`, `triaje.py`, `mapa.py`.
 
 ## Estado del repositorio
@@ -25,27 +25,32 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 - `database.py` está movido a `legacy/database.py` (legacy): usa psycopg2 directamente. La conexión y el esquema reales viven en `app.py` vía SQLAlchemy.
 
 ## Modelos (models.py, 6 tablas)
-`usuarios`, `mascotas`, `clinicas`, `consultas`, `evidencias`, `respuestas_orientacion`. Las clínicas guardan `coordenadas` como `Geometry(POINT, srid=4326)`. No hay migraciones (Alembic); las tablas se crean al arrancar Flask.
+`usuarios`, `mascotas`, `clinicas`, `consultas`, `evidencias`, `respuestas_orientacion`. Las clínicas guardan `coordenadas` como `Geometry(POINT, srid=4326)`. No hay migraciones (Alembic); las tablas se crean al arrancar Flask. `constants.py` centraliza roles, niveles de urgencia y estados/transiciones.
 
 ## Rutas principales
 - Auth: `/registro`, `/login`, `/logout` (sesiones Flask, contraseñas con hash).
 - Mascotas: `/mascotas/` (listar, crear, ver, editar, eliminar).
-- Triaje: `/triaje/` (crear consulta, evidencia, respuesta, cambio de estado). Urgencia por reglas de palabras clave; el veterinario queda asignado al responder.
+- Triaje: `/triaje/` (crear consulta, evidencia, respuesta, cambio de estado). Urgencia por reglas de palabras clave; el veterinario queda asignado al responder. El detalle muestra una guía de primeros auxilios según la urgencia; las transiciones de estado están en `constants.py` y una consulta cerrada no acepta respuestas ni evidencias.
 - Mapa: `/mapa` (Leaflet), `/clinicas`, `/clinicas/cercanas?lat=&lng=&radio=` (PostGIS).
 
 ## Datos de ejemplo
 - `python seed_clinicas.py` carga 12 clínicas ficticias del AMG; `--force` las recarga.
 - Son datos de demo académica: no usarlos para emergencias reales.
 
+## Tests
+- `tests/` usa pytest y una base separada `veterinaria_db_test`, creada por `tests/conftest.py`.
+- No ejecutar pruebas contra `veterinaria_db`; el fixture reinicia solo la base de pruebas.
+- Requiere PostgreSQL/PostGIS y permisos para crear bases de datos.
+
 ## Frontend
-- Plantillas Jinja2 en `templates/` (base, auth, mascotas, triaje, mapa) y estilos en `static/css/estilosGlobales.css`.
+- Plantillas Jinja2 en `templates/` (base, auth, mascotas, triaje, mapa, errors) y estilos en `static/css/estilosGlobales.css`.
 - `static/uploads/` se crea al arrancar `app.py` y está excluido por `.gitignore`.
 
 ## Gotchas (probable fuente de errores)
 - No tratar `legacy/database.py` como activo: es legacy; no añadir esquemas ahí.
 - Al añadir rutas nuevas, crear un Blueprint en `routes/` y registrarlo en `app.py`.
 - `.env` es fuente de verdad para credenciales; no adivinar valores.
-- Las tablas de la app están vacías hasta que se inserte datos; verificar con pgAdmin o consulta SQL antes de asumir que hay registros.
+- La BD de desarrollo conserva 1 usuario real y 12 clínicas demo; las demás tablas están vacías hasta insertar datos. Verificar con pgAdmin o consulta SQL antes de asumir registros.
 - El registro de veterinario pide cédula, pero no la verifica ni bloquea el login (MVP).
 - El borrado es en cascada total (MVP): elimina mascota, consultas, evidencias y respuestas.
 

@@ -1,6 +1,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from constants import ROLES
 from models import Usuario, db
 
 auth_bp = Blueprint('auth', __name__)
@@ -18,7 +19,7 @@ def registro():
         if not nombre or not email or not password:
             flash('Nombre, email y contraseña son obligatorios.', 'error')
             return redirect(url_for('auth.registro'))
-        if rol not in ('dueno', 'veterinario'):
+        if rol not in ROLES:
             flash('Rol inválido.', 'error')
             return redirect(url_for('auth.registro'))
         if rol == 'veterinario' and not cedula:

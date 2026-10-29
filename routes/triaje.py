@@ -6,6 +6,8 @@ from flask import (Blueprint, current_app, flash, g, redirect, render_template,
 from PIL import Image, UnidentifiedImageError
 from werkzeug.utils import secure_filename
 
+from constants import ESTADOS_CONSULTA, ESTADO_CERRADA, TRANSICIONES_ESTADO
+from data.primeros_auxilios import obtener_guia
 from models import Consulta, Evidencia, Mascota, RespuestaOrientacion, db
 from routes.utils import login_required, veterinario_required
 
@@ -23,8 +25,6 @@ PALABRAS_MODERADAS = [
     'vomita', 'diarrea', 'fiebre', 'cojea', 'dolor', 'hinchaz',
     'letargo', 'no come', 'tos',
 ]
-
-ESTADOS_VALIDOS = ('Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada')
 
 
 def clasificar_urgencia(sintomas):
@@ -95,7 +95,12 @@ def detalle(consulta_id):
     if g.usuario.rol != 'veterinario' and consulta.mascota.usuario_id != g.usuario.id:
         flash('No tienes permiso para ver esta consulta.', 'error')
         return redirect(url_for('triaje.lista'))
-    return render_template('triaje/detalle.html', consulta=consulta)
+    return render_template(
+        'triaje/detalle.html',
+        consulta=consulta,
+        guia=obtener_guia(consulta.nivel_urgencia),
+        estados_disponibles=TRANSICIONES_ESTADO.get(consulta.estado, ()),
+    )
 
 
 @triaje_bp.route('/<int:consulta_id>/evidencia', methods=['POST'])
@@ -105,6 +110,10 @@ def subir_evidencia(consulta_id):
     if consulta.mascota.usuario_id != g.usuario.id:
         flash('No tienes permiso para subir evidencia de esta consulta.', 'error')
         return redirect(url_for('triaje.lista'))
+
+    if consulta.estado == ESTADO_CERRADA:
+        flash('No se puede subir evidencia a una consulta cerrada.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
     archivo = request.files.get('archivo')
     if not archivo or archivo.filename == '':
@@ -148,6 +157,10 @@ def subir_evidencia(consulta_id):
 @veterinario_required
 def responder(consulta_id):
     consulta = Consulta.query.get_or_404(consulta_id)
+    if consulta.estado == ESTADO_CERRADA:
+        flash('No se puede responder una consulta cerrada.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
     mensaje = request.form.get('mensaje', '').strip()
     if not mensaje:
         flash('Escribe una respuesta antes de enviarla.', 'error')
@@ -172,8 +185,10 @@ def responder(consulta_id):
 def cambiar_estado(consulta_id):
     consulta = Consulta.query.get_or_404(consulta_id)
     nuevo_estado = request.form.get('estado')
-    if nuevo_estado not in ESTADOS_VALIDOS:
+    if nuevo_estado not in ESTADOS_CONSULTA:
         flash('Estado inválido.', 'error')
+    elif nuevo_estado not in TRANSICIONES_ESTADO.get(consulta.estado, ()):
+        flash(f'No se puede pasar de "{consulta.estado}" a "{nuevo_estado}".', 'error')
     else:
         if consulta.veterinario_id is None:
             consulta.veterinario_id = g.usuario.id
