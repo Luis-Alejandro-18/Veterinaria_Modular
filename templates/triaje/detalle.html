@@ -10,9 +10,12 @@
 
 <div class="card">
   <p><strong>Mascota:</strong> {{ consulta.mascota.nombre }} ({{ consulta.mascota.especie }})</p>
-  <p><strong>Fecha:</strong> {{ consulta.fecha_creacion.strftime('%Y-%m-%d %H:%M') }}</p>
+  <p><strong>Fecha:</strong> {{ consulta.fecha_creacion|local_time }}</p>
   <p><strong>Urgencia:</strong> <span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></p>
   <p><strong>Estado:</strong> {{ consulta.estado }}</p>
+  {% if consulta.veterinario %}
+    <p><strong>Atendida por:</strong> {{ consulta.veterinario.nombre }}</p>
+  {% endif %}
   <p><strong>Síntomas:</strong></p>
   <p class="pre-wrap">{{ consulta.sintomas }}</p>
 </div>
@@ -27,7 +30,7 @@
         {% else %}
           <video src="{{ url_for('static', filename=evidencia.ruta_archivo) }}" controls class="evidence-video"></video>
         {% endif %}
-        <small>{{ evidencia.fecha_subida.strftime('%Y-%m-%d %H:%M') }}</small>
+        <small>{{ evidencia.fecha_subida|local_time }}</small>
       </li>
     {% endfor %}
   </ul>
@@ -49,7 +52,7 @@
   {% for respuesta in consulta.respuestas %}
     <div class="card response">
       <p class="pre-wrap">{{ respuesta.mensaje }}</p>
-      <small>{{ respuesta.fecha_respuesta.strftime('%Y-%m-%d %H:%M') }} — Veterinario #{{ respuesta.veterinario_id }}</small>
+      <small>{{ respuesta.fecha_respuesta|local_time }} — {{ respuesta.veterinario.nombre if respuesta.veterinario else 'Veterinario' }}</small>
     </div>
   {% endfor %}
 {% else %}

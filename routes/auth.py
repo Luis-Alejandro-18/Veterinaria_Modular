@@ -21,6 +21,9 @@ def registro():
         if rol not in ('dueno', 'veterinario'):
             flash('Rol inválido.', 'error')
             return redirect(url_for('auth.registro'))
+        if rol == 'veterinario' and not cedula:
+            flash('La cédula profesional es obligatoria para registrarse como veterinario.', 'error')
+            return redirect(url_for('auth.registro'))
         if len(password) < 6:
             flash('La contraseña debe tener al menos 6 caracteres.', 'error')
             return redirect(url_for('auth.registro'))

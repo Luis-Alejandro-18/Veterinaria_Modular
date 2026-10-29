@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Archivo demasiado grande — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>413</h1>
+  <p>El archivo que intentaste subir supera el límite de 16 MB.</p>
+  <p>Intenta con una imagen o video más pequeño.</p>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('triaje.lista') }}">Volver a mis consultas</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,6 +1,7 @@
+import os
 from functools import wraps
 
-from flask import flash, g, redirect, session, url_for
+from flask import current_app, flash, g, redirect, session, url_for
 
 from models import db, Usuario
 
@@ -37,3 +38,17 @@ def veterinario_required(view):
         return view(*args, **kwargs)
 
     return wrapped_view
+
+
+def eliminar_evidencias_de_consulta(consulta):
+    """Elimina del disco las evidencias de una consulta antes de borrarla en BD."""
+    for evidencia in consulta.evidencias:
+        ruta = os.path.join(current_app.static_folder, evidencia.ruta_archivo)
+        if os.path.exists(ruta):
+            os.remove(ruta)
+
+
+def eliminar_evidencias_de_mascota(mascota):
+    """Elimina del disco todas las evidencias de las consultas de una mascota."""
+    for consulta in mascota.consultas:
+        eliminar_evidencias_de_consulta(consulta)

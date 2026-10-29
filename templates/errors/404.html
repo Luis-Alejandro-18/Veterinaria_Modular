@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Página no encontrada — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>404</h1>
+  <p>La página que buscas no existe o fue movida.</p>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('index') }}">Volver al inicio</a>
+    <a class="btn" href="{{ url_for('mapa.mapa') }}">Ver el mapa</a>
+  </div>
+</section>
+{% endblock %}

@@ -25,7 +25,7 @@
   <tbody>
     {% for consulta in consultas %}
     <tr>
-      <td>{{ consulta.fecha_creacion.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ consulta.fecha_creacion|local_time }}</td>
       <td>{{ consulta.mascota.nombre }}</td>
       <td>{{ consulta.sintomas|truncate(60, True) }}</td>
       <td><span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></td>

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Error interno — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>500</h1>
+  <p>Ocurrió un error inesperado. Intenta de nuevo en unos momentos.</p>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('index') }}">Volver al inicio</a>
+  </div>
+</section>
+{% endblock %}

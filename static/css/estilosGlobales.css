@@ -100,6 +100,8 @@ h1 { margin-top: 0; }
 .form .checkbox { flex-direction: row; align-items: flex-start; font-weight: 400; gap: 0.5rem; }
 .form .checkbox input { margin-top: 0.3rem; }
 
+.hint { color: var(--muted); font-size: 0.85rem; margin-top: -0.5rem; }
+
 .form-inline { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
 .form-inline input[type="file"],
 .form-inline select {

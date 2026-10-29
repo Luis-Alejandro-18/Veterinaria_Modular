@@ -61,10 +61,23 @@ python app.py
 
 Disponible en `http://localhost:5000`. Al iniciar, la aplicación habilita PostGIS y crea las tablas automáticamente.
 
+## Datos de ejemplo para el mapa
+
+La tabla `clinicas` empieza vacía. Para cargar 12 clínicas ficticias del AMG y probar el mapa:
+
+```bash
+python seed_clinicas.py
+# Si ya existen y quieres recargarlas:
+python seed_clinicas.py --force
+```
+
+> Los datos son ficticios y solo sirven para la demo académica. No deben usarse para emergencias reales.
+
 ## Estado actual
 
 - Backend Flask con 6 tablas: `usuarios`, `mascotas`, `clinicas`, `consultas`, `evidencias`, `respuestas_orientacion`.
 - Endpoints de autenticación, mascotas, triaje y mapa implementados (Blueprints en `routes/`).
+- Fase 1 completada: borrado en cascada con limpieza de archivos, veterinario responsable, hora local, cédula sin bloqueo, seed de clínicas y páginas 404/413/500.
 - Frontend básico con plantillas Jinja2 y estilos; mapa con Leaflet.
 - Sin migraciones: las tablas se crean con `db.create_all()` al iniciar.
 
@@ -73,9 +86,10 @@ Disponible en `http://localhost:5000`. Al iniciar, la aplicación habilita PostG
 ```
 app.py               # Servidor Flask y configuración de la BD
 models.py            # Modelos SQLAlchemy + GeoAlchemy2
+seed_clinicas.py     # Datos de ejemplo para el mapa
 routes/              # Blueprints (auth, mascotas, triaje, mapa)
 requirements.txt     # Dependencias
-templates/           # Plantillas Jinja2
+templates/           # Plantillas Jinja2 (incluye errors/)
 static/css/          # Estilos
 static/uploads/      # Evidencias (creado al arrancar, no versionado)
 legacy/              # Código deprecado (database.py)

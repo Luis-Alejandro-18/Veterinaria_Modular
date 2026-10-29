@@ -30,8 +30,12 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 ## Rutas principales
 - Auth: `/registro`, `/login`, `/logout` (sesiones Flask, contraseñas con hash).
 - Mascotas: `/mascotas/` (listar, crear, ver, editar, eliminar).
-- Triaje: `/triaje/` (crear consulta, evidencia, respuesta, cambio de estado). Urgencia por reglas de palabras clave.
+- Triaje: `/triaje/` (crear consulta, evidencia, respuesta, cambio de estado). Urgencia por reglas de palabras clave; el veterinario queda asignado al responder.
 - Mapa: `/mapa` (Leaflet), `/clinicas`, `/clinicas/cercanas?lat=&lng=&radio=` (PostGIS).
+
+## Datos de ejemplo
+- `python seed_clinicas.py` carga 12 clínicas ficticias del AMG; `--force` las recarga.
+- Son datos de demo académica: no usarlos para emergencias reales.
 
 ## Frontend
 - Plantillas Jinja2 en `templates/` (base, auth, mascotas, triaje, mapa) y estilos en `static/css/estilosGlobales.css`.
@@ -42,6 +46,8 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 - Al añadir rutas nuevas, crear un Blueprint en `routes/` y registrarlo en `app.py`.
 - `.env` es fuente de verdad para credenciales; no adivinar valores.
 - Las tablas de la app están vacías hasta que se inserte datos; verificar con pgAdmin o consulta SQL antes de asumir que hay registros.
+- El registro de veterinario pide cédula, pero no la verifica ni bloquea el login (MVP).
+- El borrado es en cascada total (MVP): elimina mascota, consultas, evidencias y respuestas.
 
 ## Forma de trabajar
 - Haz solo lo que se pide: no añadas funcionalidades por tu cuenta.

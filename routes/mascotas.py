@@ -1,7 +1,7 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 from models import Mascota, db
-from routes.utils import login_required
+from routes.utils import eliminar_evidencias_de_mascota, login_required
 
 mascotas_bp = Blueprint('mascotas', __name__, url_prefix='/mascotas')
 
@@ -103,6 +103,8 @@ def eliminar(mascota_id):
         flash('No tienes permiso para eliminar esta mascota.', 'error')
         return redirect(url_for('mascotas.lista'))
 
+    # Borrado en cascada (MVP): primero archivos, luego registros.
+    eliminar_evidencias_de_mascota(mascota)
     db.session.delete(mascota)
     db.session.commit()
     flash('Mascota eliminada.', 'success')

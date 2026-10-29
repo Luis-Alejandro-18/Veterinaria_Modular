@@ -4,38 +4,33 @@
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
-- Backend Flask inicializado (`app.py`) con SQLAlchemy + PostgreSQL/PostGIS.
-- 6 tablas en `veterinaria_db`: usuarios, mascotas, clinicas, consultas, evidencias, respuestas_orientacion. Todas **vacías**.
-- PostGIS activo: `clinicas.coordenadas` = POINT SRID 4326.
-- Endpoints implementados en Blueprints (`routes/`): auth (registro/login/logout), mascotas (CRUD), triaje (consulta, evidencias, respuestas, estado) y mapa (Leaflet + PostGIS).
-- Frontend básico con plantillas Jinja2 y `estilosGlobales.css`; `static/uploads/` se crea al arrancar.
-- `requirements.txt` y `.gitignore` creados; `.env` no versionado.
-- `README.md` con instrucciones de instalación, configuración y estructura creado.
-- `CONTRIBUTING.md` con el flujo de ramas, commits y PRs creado.
-- `database.py` movido a `legacy/database.py` (no se usa).
-- Repo Git inicializado y sincronizado con `origin/main` en GitHub (Luis-Alejandro-18/Veterinaria_Modular).
+- MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas; 1 usuario real y 12 clínicas de ejemplo (resto vacío).
+- Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado) y mapa (Leaflet + PostGIS).
+- Fase 1 completada: borrado en cascada + limpieza de archivos, `veterinario_id`, hora local, cédula sin bloqueo, seed de clínicas y páginas 404/413/500.
+- Frontend básico con Jinja2 y `estilosGlobales.css`; `static/uploads/` se crea al arrancar.
+- Repo Git en `origin/main` (Luis-Alejandro-18/Veterinaria_Modular); `main` protegida (PR obligatorio).
 
 ## Decisiones (y por qué)
-- SQLAlchemy como única vía de conexión: evita duplicidad; `database.py` con psycopg2 quedó en `legacy/`.
-- `db.create_all()` al arrancar: simple para la etapa inicial; sin Alembic/migraciones.
-- PostGIS SRID 4326: estándar GPS lat/lng para geolocalización en el AMG.
-- `.gitignore` excluye `.env` y `.venv/`: evitar subir credenciales y entorno local.
-- `MEMORY.md` separado de `AGENTS.md`: mantener `AGENTS.md` corto y estable; lo volátil va aquí.
-- Blueprints por módulo: permiten trabajo en paralelo sin conflictos en `app.py`.
-- Sesiones Flask para auth: simple y suficiente para el MVP; contraseñas con `werkzeug.security`.
-- Urgencia por reglas de palabras clave: rápido de implementar y explicable; se puede mejorar luego.
-- Leaflet para el mapa: gratuito y sin API key; el backend expone JSON (`/clinicas`).
+- SQLAlchemy como única vía de conexión; `legacy/database.py` no se usa.
+- `db.create_all()` sin migraciones: el esquema actual alcanza para el MVP.
+- PostGIS SRID 4326 para clínicas; Leaflet sin API key.
+- Blueprints por módulo para trabajar en paralelo.
+- Sesiones Flask + `werkzeug.security` para auth.
+- Urgencia por reglas de palabras clave (MVP).
+- Cédula obligatoria para veterinarios, pero sin verificación ni bloqueo de login (MVP).
+- Borrado total en cascada (MVP); no se conserva historial.
+- Clínicas por seed (`seed_clinicas.py`); sin CRUD de admin por ahora.
+- Zona horaria: se guarda UTC naive y se muestra en `America/Mexico_City` (fallback UTC-6).
 
 ## Aprendizajes y errores a evitar
-- `app.py` falla silenciosamente si PostgreSQL/PostGIS no están disponibles: revisar la consola al iniciar.
-- No asumir que las tablas tienen datos: están vacías hasta insertar registros.
-- No editar `legacy/database.py` como si fuera activo.
-- Verificar el estado real de la BD antes de codificar contra ella (pgAdmin o consulta SQL de solo lectura).
-- En PowerShell, invocar el venv con `& "...\.venv\Scripts\python.exe" "script.py"`.
-- En Windows, evitar emojis en `print()` de Python (cp1252 lanza `UnicodeEncodeError`); usar `[OK]`/`[ERROR]`.
+- `app.py` falla silenciosamente si PostgreSQL/PostGIS no están disponibles: revisar consola.
+- No asumir datos existentes; las tablas están vacías hasta insertar.
+- No editar `legacy/database.py`.
+- En PowerShell: `& "...\.venv\Scripts\python.exe" "script.py"`.
+- Evitar emojis en `print()` (cp1252 en Windows): usar `[OK]`/`[ERROR]`.
+- Los datos de `seed_clinicas.py` son ficticios; no usar en producción.
 
 ## Próximos pasos
-- Insertar clínicas de ejemplo (seed) para probar el mapa en el AMG.
-- Añadir pruebas automatizadas del flujo (pytest) y CI.
-- Mejorar validación de formularios y manejo de errores.
-- Revisar roles/permisos (veterinario vs dueño) y cierre de consultas.
+- Fase 2: primeros auxilios, consistencia de estados, tests smoke y docs.
+- Fase 3: CSRF, evidencias privadas, filtros/paginación.
+- Fase 4: frontend (diseño, dashboard, wizard, mapa, panel veterinario).

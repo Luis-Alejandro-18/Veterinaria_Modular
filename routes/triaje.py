@@ -158,6 +158,8 @@ def responder(consulta_id):
         veterinario_id=g.usuario.id,
         mensaje=mensaje,
     )
+    if consulta.veterinario_id is None:
+        consulta.veterinario_id = g.usuario.id
     consulta.estado = 'En Atención'
     db.session.add(respuesta)
     db.session.commit()
@@ -173,6 +175,8 @@ def cambiar_estado(consulta_id):
     if nuevo_estado not in ESTADOS_VALIDOS:
         flash('Estado inválido.', 'error')
     else:
+        if consulta.veterinario_id is None:
+            consulta.veterinario_id = g.usuario.id
         consulta.estado = nuevo_estado
         db.session.commit()
         flash('Estado actualizado.', 'success')
