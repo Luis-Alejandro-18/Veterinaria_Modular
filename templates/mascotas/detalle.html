@@ -30,6 +30,7 @@
   {% if mascota.usuario_id == usuario_actual.id %}
     <a class="btn" href="{{ url_for('mascotas.editar', mascota_id=mascota.id) }}">Editar</a>
     <form method="post" action="{{ url_for('mascotas.eliminar', mascota_id=mascota.id) }}" class="inline-form" onsubmit="return confirm('¿Eliminar esta mascota?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-danger">Eliminar</button>
     </form>
   {% endif %}

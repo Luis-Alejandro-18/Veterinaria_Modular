@@ -6,6 +6,7 @@
 <h1>{% if mascota %}Editar mascota{% else %}Nueva mascota{% endif %}</h1>
 
 <form method="post" class="form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label>Nombre
     <input type="text" name="nombre" required value="{{ mascota.nombre if mascota else '' }}">
   </label>

@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from io import BytesIO
 
@@ -29,10 +30,10 @@ def _login(client, email):
     )
 
 
-def _crear_mascota(client, nombre='Firulais'):
+def _crear_mascota(client, nombre='Firulais', especie='Perro'):
     return client.post(
         '/mascotas/nueva',
-        data={'nombre': nombre, 'especie': 'Perro'},
+        data={'nombre': nombre, 'especie': especie},
         follow_redirects=True,
     )
 
@@ -63,6 +64,12 @@ def _crear_consulta(client, mascota_id, sintomas):
                     .order_by(Consulta.id.desc())
                     .first())
         return consulta.id
+
+
+def _csrf_token(html):
+    coincidencia = re.search(r'name="csrf_token" value="([^"]+)"', html)
+    assert coincidencia is not None
+    return coincidencia.group(1)
 
 
 def test_registro_login_y_triaje_urgente(client):
@@ -270,3 +277,150 @@ def test_hora_local_404_y_413(client):
         assert respuesta.status_code == 413
     finally:
         app.config['MAX_CONTENT_LENGTH'] = original
+
+
+def test_csrf_protege_formularios(client_csrf):
+    html = client_csrf.get('/registro').get_data(as_text=True)
+    token = _csrf_token(html)
+    datos = {
+        'nombre': 'CSRF Test',
+        'email': 'csrf@test.local',
+        'password': 'secreto123',
+        'rol': 'dueno',
+    }
+
+    sin_token = client_csrf.post('/registro', data=datos)
+    assert sin_token.status_code == 400
+    assert 'Solicitud inválida' in sin_token.get_data(as_text=True)
+
+    token = _csrf_token(client_csrf.get('/registro').get_data(as_text=True))
+    con_token = client_csrf.post(
+        '/registro',
+        data={**datos, 'csrf_token': token},
+        follow_redirects=True,
+    )
+    assert con_token.status_code == 200
+    assert 'Registro exitoso' in con_token.get_data(as_text=True)
+
+
+def test_evidencia_privada(client, uploads_temporales):
+    _registrar(client, 'dueno5@test.local', nombre='Dueño Cinco')
+    _login(client, 'dueno5@test.local')
+    _crear_mascota(client)
+    mascota_id = _id_mascota('dueno5@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Revisión general')
+
+    archivo = uploads_temporales / 'prueba.png'
+    archivo.write_bytes(b'contenido-privado')
+    with app.app_context():
+        evidencia = Evidencia(
+            consulta_id=consulta_id,
+            ruta_archivo='uploads/prueba.png',
+            tipo='imagen',
+        )
+        db.session.add(evidencia)
+        db.session.commit()
+        evidencia_id = evidencia.id
+
+    html = client.get(f'/triaje/{consulta_id}').get_data(as_text=True)
+    assert f'/triaje/evidencia/{evidencia_id}' in html
+
+    respuesta = client.get(f'/triaje/evidencia/{evidencia_id}')
+    assert respuesta.status_code == 200
+    assert respuesta.data == b'contenido-privado'
+    assert respuesta.headers['Cache-Control'] == 'private, no-store'
+    assert respuesta.headers['X-Content-Type-Options'] == 'nosniff'
+
+    client.post('/logout')
+    _registrar(client, 'otro5@test.local', nombre='Otro Cinco')
+    _login(client, 'otro5@test.local')
+    assert client.get(f'/triaje/evidencia/{evidencia_id}').status_code == 404
+
+    client.post('/logout')
+    _registrar(
+        client,
+        'vet5@test.local',
+        nombre='Vet Cinco',
+        rol='veterinario',
+        cedula='VET-5',
+    )
+    _login(client, 'vet5@test.local')
+    assert client.get(f'/triaje/evidencia/{evidencia_id}').status_code == 200
+
+
+def test_static_uploads_bloqueado(client):
+    assert client.get('/static/uploads/prueba.png').status_code == 404
+
+
+def test_filtros_y_paginacion_mascotas(client):
+    _registrar(client, 'dueno6@test.local', nombre='Dueño Seis')
+    _login(client, 'dueno6@test.local')
+    for i in range(12):
+        especie = 'Gato' if i % 2 else 'Perro'
+        _crear_mascota(client, f'Mascota {i:02d}', especie)
+
+    html = client.get('/mascotas/', query_string={'page': 2}).get_data(as_text=True)
+    assert 'Página 2 de 2' in html
+    assert 'Mascota 10' in html
+    assert 'Mascota 11' in html
+    assert 'Mascota 00' not in html
+
+    html = client.get(
+        '/mascotas/',
+        query_string={'q': 'Mascota 03'},
+    ).get_data(as_text=True)
+    assert 'Mascota 03' in html
+    assert 'Mascota 04' not in html
+
+    html = client.get(
+        '/mascotas/',
+        query_string={'especie': 'Gato'},
+    ).get_data(as_text=True)
+    assert 'Mascota 01' in html
+    assert 'Mascota 00' not in html
+
+
+def test_filtros_y_paginacion_triaje(client):
+    _registrar(client, 'dueno7@test.local', nombre='Dueño Siete')
+    _login(client, 'dueno7@test.local')
+    _crear_mascota(client)
+    mascota_id = _id_mascota('dueno7@test.local')
+
+    ids = []
+    for i in range(12):
+        sintomas = f'consulta numero {i:02d}'
+        if i == 0:
+            sintomas += ' sangra'
+        ids.append(_crear_consulta(client, mascota_id, sintomas))
+
+    html = client.get('/triaje/', query_string={'page': 2}).get_data(as_text=True)
+    assert 'Página 2 de 2' in html
+    assert 'consulta numero 00' in html
+    assert 'consulta numero 01' in html
+    assert 'consulta numero 11' not in html
+
+    html = client.get(
+        '/triaje/',
+        query_string={'urgencia': 'Urgente'},
+    ).get_data(as_text=True)
+    assert 'consulta numero 00' in html
+    assert 'consulta numero 01' not in html
+
+    html = client.get(
+        '/triaje/',
+        query_string={'q': 'numero 03'},
+    ).get_data(as_text=True)
+    assert 'consulta numero 03' in html
+    assert 'consulta numero 04' not in html
+
+    with app.app_context():
+        consulta = db.session.get(Consulta, ids[3])
+        consulta.estado = 'Cerrada'
+        db.session.commit()
+
+    html = client.get(
+        '/triaje/',
+        query_string={'estado': 'Cerrada'},
+    ).get_data(as_text=True)
+    assert 'consulta numero 03' in html
+    assert 'consulta numero 04' not in html

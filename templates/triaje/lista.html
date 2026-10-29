@@ -10,6 +10,24 @@
   {% endif %}
 </div>
 
+<form method="get" class="filters">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar mascota o síntomas">
+  <select name="estado">
+    <option value="">Todos los estados</option>
+    {% for opcion in estados %}
+      <option value="{{ opcion }}" {% if estado == opcion %}selected{% endif %}>{{ opcion }}</option>
+    {% endfor %}
+  </select>
+  <select name="urgencia">
+    <option value="">Todas las urgencias</option>
+    {% for opcion in niveles %}
+      <option value="{{ opcion }}" {% if urgencia == opcion %}selected{% endif %}>{{ opcion }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn">Filtrar</button>
+  <a class="btn" href="{{ url_for('triaje.lista') }}">Limpiar</a>
+</form>
+
 {% if consultas %}
 <table class="table">
   <thead>
@@ -35,7 +53,19 @@
     {% endfor %}
   </tbody>
 </table>
+<p class="hint">{{ paginacion.total }} consulta(s) encontrada(s).</p>
+{% if paginacion.pages > 1 %}
+<nav class="pagination">
+  {% if paginacion.has_prev %}
+    <a class="btn" href="{{ url_for('triaje.lista', page=paginacion.prev_num, q=q, estado=estado, urgencia=urgencia) }}">← Anterior</a>
+  {% endif %}
+  <span>Página {{ paginacion.page }} de {{ paginacion.pages }}</span>
+  {% if paginacion.has_next %}
+    <a class="btn" href="{{ url_for('triaje.lista', page=paginacion.next_num, q=q, estado=estado, urgencia=urgencia) }}">Siguiente →</a>
+  {% endif %}
+</nav>
+{% endif %}
 {% else %}
-<p>No hay consultas registradas.</p>
+<p>{% if q or estado or urgencia %}No hay consultas que coincidan con los filtros.{% else %}No hay consultas registradas.{% endif %}</p>
 {% endif %}
 {% endblock %}

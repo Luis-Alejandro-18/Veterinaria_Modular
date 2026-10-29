@@ -1,4 +1,5 @@
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from sqlalchemy import or_
 
 from models import Mascota, db
 from routes.utils import eliminar_evidencias_de_mascota, login_required
@@ -23,11 +24,31 @@ def _to_float(value):
 @mascotas_bp.route('/')
 @login_required
 def lista():
-    mascotas = (Mascota.query
-                .filter_by(usuario_id=g.usuario.id)
-                .order_by(Mascota.nombre)
-                .all())
-    return render_template('mascotas/lista.html', mascotas=mascotas)
+    q = request.args.get('q', '').strip()
+    especie = request.args.get('especie', '').strip()
+    pagina = max(request.args.get('page', 1, type=int) or 1, 1)
+
+    mascotas_query = Mascota.query.filter_by(usuario_id=g.usuario.id)
+    if q:
+        like = f'%{q}%'
+        mascotas_query = mascotas_query.filter(
+            or_(Mascota.nombre.ilike(like),
+                Mascota.especie.ilike(like),
+                Mascota.raza.ilike(like))
+        )
+    if especie:
+        mascotas_query = mascotas_query.filter(Mascota.especie.ilike(especie))
+
+    paginacion = (mascotas_query
+                  .order_by(Mascota.nombre)
+                  .paginate(page=pagina, per_page=10, error_out=False))
+    return render_template(
+        'mascotas/lista.html',
+        mascotas=paginacion.items,
+        paginacion=paginacion,
+        q=q,
+        especie=especie,
+    )
 
 
 @mascotas_bp.route('/nueva', methods=['GET', 'POST'])

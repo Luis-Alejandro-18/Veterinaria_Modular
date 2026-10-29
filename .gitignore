@@ -19,7 +19,10 @@ __pycache__/
 Thumbs.db
 desktop.ini
 
-# Subidas de evidencias médicas (futuro)
+# Evidencias privadas (nuevas)
+instance/
+
+# Evidencias antiguas (legacy)
 static/uploads/
 
 # IDEs

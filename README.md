@@ -2,7 +2,7 @@
 
 Plataforma e-health para la atención y orientación preliminar en emergencias veterinarias mediante triaje digital, primeros auxilios y geolocalización de clínicas 24/7 en el Área Metropolitana de Guadalajara (AMG).
 
-Backend construido con Python, Flask, Flask-SQLAlchemy, PostgreSQL y PostGIS.
+Backend construido con Python, Flask, Flask-SQLAlchemy, Flask-WTF, PostgreSQL y PostGIS.
 
 ## Requisitos previos
 
@@ -89,13 +89,26 @@ python seed_clinicas.py --force
 python -m pytest -q
 ```
 
-`tests/conftest.py` crea automáticamente la base `veterinaria_db_test` (a partir de `DB_NAME`) y reinicia sus tablas en cada prueba. Requiere PostgreSQL/PostGIS y permisos para crear bases. No usa la base de desarrollo.
+`tests/conftest.py` crea automáticamente la base `veterinaria_db_test` (a partir de `DB_NAME`) y reinicia sus tablas en cada prueba. Requiere PostgreSQL/PostGIS y permisos para crear bases. No usa la base de desarrollo. Actualmente son 13 pruebas smoke.
+
+## Seguridad y evidencias
+
+- Todos los formularios POST usan token CSRF de Flask-WTF. Si falta o expira, se muestra una página 400.
+- Las evidencias se guardan en `instance/uploads/`, fuera de `static/`, y se sirven mediante `/triaje/evidencia/<id>`.
+- Solo el dueño de la mascota o un veterinario autenticado puede ver una evidencia. La respuesta usa `Cache-Control: private, no-store` y `X-Content-Type-Options: nosniff`.
+- `static/uploads/` queda bloqueado para archivos antiguos.
+- Cambia `SECRET_KEY` en `.env`: se usa para las sesiones y para firmar los tokens CSRF.
+
+## Filtros y paginación
+
+- Mascotas: búsqueda por nombre, especie o raza y filtro por especie; 10 por página.
+- Triaje: búsqueda por mascota o síntomas, filtro por estado y urgencia; 10 por página.
 
 ## Estado actual
 
 - Backend Flask con 6 tablas: `usuarios`, `mascotas`, `clinicas`, `consultas`, `evidencias`, `respuestas_orientacion`.
 - Endpoints de autenticación, mascotas, triaje y mapa implementados (Blueprints en `routes/`).
-- Fases 1 y 2 completadas: borrado en cascada con limpieza de archivos, veterinario responsable, hora local, cédula sin bloqueo, seed de clínicas, páginas 404/413/500, guía de primeros auxilios, transiciones de estado validadas y tests smoke con pytest.
+- Fases 1, 2 y 3 completadas: borrado en cascada con limpieza de archivos, veterinario responsable, hora local, cédula sin bloqueo, seed de clínicas, páginas 404/413/500, guía de primeros auxilios, transiciones de estado validadas, CSRF, evidencias privadas, filtros/paginación y tests smoke con pytest.
 - Frontend básico con plantillas Jinja2 y estilos; mapa con Leaflet.
 - Sin migraciones: las tablas se crean con `db.create_all()` al iniciar.
 
@@ -113,7 +126,8 @@ pytest.ini           # Configuración de pytest
 requirements.txt     # Dependencias
 templates/           # Plantillas Jinja2 (incluye errors/)
 static/css/          # Estilos
-static/uploads/      # Evidencias (creado al arrancar, no versionado)
+instance/uploads/    # Evidencias privadas (creado al arrancar, no versionado)
+static/uploads/      # Evidencias antiguas (bloqueadas; no versionado)
 legacy/              # Código deprecado (database.py)
 ```
 

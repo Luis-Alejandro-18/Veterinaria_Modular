@@ -39,12 +39,41 @@ os.environ['DB_NAME'] = TEST_DB
 from app import app  # noqa: E402
 from models import db  # noqa: E402
 
+app.config['TESTING'] = True
+app.config['WTF_CSRF_ENABLED'] = False
+
 
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = False
     with app.test_client() as cliente:
         yield cliente
+
+
+@pytest.fixture
+def client_csrf():
+    """Cliente con CSRF activo para probar la protección de formularios."""
+    app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = True
+    try:
+        with app.test_client() as cliente:
+            yield cliente
+    finally:
+        app.config['WTF_CSRF_ENABLED'] = False
+
+
+@pytest.fixture(autouse=True)
+def uploads_temporales(tmp_path):
+    """Evita escribir evidencias reales durante las pruebas."""
+    ruta_original = app.config['UPLOAD_FOLDER']
+    ruta = tmp_path / 'uploads'
+    ruta.mkdir()
+    app.config['UPLOAD_FOLDER'] = str(ruta)
+    try:
+        yield ruta
+    finally:
+        app.config['UPLOAD_FOLDER'] = ruta_original
 
 
 @pytest.fixture(autouse=True)

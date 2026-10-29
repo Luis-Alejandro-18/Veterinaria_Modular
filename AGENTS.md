@@ -4,12 +4,12 @@
 Plataforma e-health para triaje digital de emergencias veterinarias, primeros auxilios y geolocalización de clínicas 24/7 en el Área Metropolitana de Guadalajara (AMG).
 
 ## Stack
-Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python-dotenv, Pillow. Frontend: HTML5 (Jinja2), CSS3, JS nativo (Leaflet / Google Maps API).
+Python 3.10+, Flask, Flask-SQLAlchemy, Flask-WTF, GeoAlchemy2, PostgreSQL + PostGIS, python-dotenv, Pillow. Frontend: HTML5 (Jinja2), CSS3, JS nativo (Leaflet / Google Maps API).
 
 ## Entrypoint y ejecución
 - Archivo principal: `app.py` (Flask). Ejecutar: `python app.py` desde la raíz del repo con el venv activo (`.venv\Scripts\activate` en Windows).
-- `requirements.txt` existe (Flask, Flask-SQLAlchemy, GeoAlchemy2, Pillow, psycopg2-binary, pytest, etc.).
-- Tests smoke con pytest (`python -m pytest -q`); sin CI.
+- `requirements.txt` existe (Flask, Flask-SQLAlchemy, Flask-WTF, GeoAlchemy2, Pillow, psycopg2-binary, pytest, etc.).
+- Tests smoke con pytest (13 pruebas, `python -m pytest -q`); sin CI.
 - Rutas organizadas en Blueprints dentro de `routes/`: `auth.py`, `mascotas.py`, `triaje.py`, `mapa.py`.
 
 ## Estado del repositorio
@@ -22,6 +22,7 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 - Motor: PostgreSQL con extensión PostGIS (SRID 4326 para coordenadas GPS).
 - Credenciales en `.env` (no versionar): `DB_HOST=localhost`, `DB_PORT=5432`, `DB_NAME=veterinaria_db`, `DB_USER=postgres`, `DB_PASSWORD=123456`, `SECRET_KEY=...`, `FLASK_ENV=development`.
 - `app.py` ejecuta `CREATE EXTENSION IF NOT EXISTS postgis;` y `db.create_all()` al iniciar. Si PostgreSQL/PostGIS no están instalados ni la base `veterinaria_db` creada, falla silenciosamente (solo imprime error).
+- Las evidencias se guardan en `instance/uploads/`, fuera de `static/`; la carpeta se crea al arrancar y está excluida por `.gitignore`.
 - `database.py` está movido a `legacy/database.py` (legacy): usa psycopg2 directamente. La conexión y el esquema reales viven en `app.py` vía SQLAlchemy.
 
 ## Modelos (models.py, 6 tablas)
@@ -31,6 +32,7 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 - Auth: `/registro`, `/login`, `/logout` (sesiones Flask, contraseñas con hash).
 - Mascotas: `/mascotas/` (listar, crear, ver, editar, eliminar).
 - Triaje: `/triaje/` (crear consulta, evidencia, respuesta, cambio de estado). Urgencia por reglas de palabras clave; el veterinario queda asignado al responder. El detalle muestra una guía de primeros auxilios según la urgencia; las transiciones de estado están en `constants.py` y una consulta cerrada no acepta respuestas ni evidencias.
+- Evidencias: `GET /triaje/evidencia/<id>` sirve archivos privados solo al dueño de la mascota o a un veterinario autenticado.
 - Mapa: `/mapa` (Leaflet), `/clinicas`, `/clinicas/cercanas?lat=&lng=&radio=` (PostGIS).
 
 ## Datos de ejemplo
@@ -41,10 +43,11 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 - `tests/` usa pytest y una base separada `veterinaria_db_test`, creada por `tests/conftest.py`.
 - No ejecutar pruebas contra `veterinaria_db`; el fixture reinicia solo la base de pruebas.
 - Requiere PostgreSQL/PostGIS y permisos para crear bases de datos.
+- Son 13 pruebas smoke; incluyen un caso con CSRF activo (`client_csrf`) y evidencias servidas desde una carpeta temporal.
 
 ## Frontend
 - Plantillas Jinja2 en `templates/` (base, auth, mascotas, triaje, mapa, errors) y estilos en `static/css/estilosGlobales.css`.
-- `static/uploads/` se crea al arrancar `app.py` y está excluido por `.gitignore`.
+- `instance/uploads/` se crea al arrancar `app.py` y está excluido por `.gitignore`.
 
 ## Gotchas (probable fuente de errores)
 - No tratar `legacy/database.py` como activo: es legacy; no añadir esquemas ahí.
@@ -53,6 +56,8 @@ Python 3.10+, Flask, Flask-SQLAlchemy, GeoAlchemy2, PostgreSQL + PostGIS, python
 - La BD de desarrollo conserva 1 usuario real y 12 clínicas demo; las demás tablas están vacías hasta insertar datos. Verificar con pgAdmin o consulta SQL antes de asumir registros.
 - El registro de veterinario pide cédula, pero no la verifica ni bloquea el login (MVP).
 - El borrado es en cascada total (MVP): elimina mascota, consultas, evidencias y respuestas.
+- Todo formulario POST debe incluir `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">`. Los tests generales desactivan CSRF, salvo el test dedicado.
+- No volver a servir evidencias desde `static/uploads/`: esa ruta está bloqueada y los archivos nuevos viven en `instance/uploads/`.
 
 ## Forma de trabajar
 - Haz solo lo que se pide: no añadas funcionalidades por tu cuenta.

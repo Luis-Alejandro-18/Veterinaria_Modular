@@ -102,7 +102,7 @@ class Evidencia(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     consulta_id = db.Column(db.Integer, db.ForeignKey('consultas.id'), nullable=False)
-    ruta_archivo = db.Column(db.String(255), nullable=False)  # URL de la imagen/video
+    ruta_archivo = db.Column(db.String(255), nullable=False)  # Nombre/ruta del archivo; se sirve desde instance/uploads
     tipo = db.Column(db.String(20), nullable=False)  # 'imagen' o 'video'
     fecha_subida = db.Column(db.DateTime, default=utcnow)
 
