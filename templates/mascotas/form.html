@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if mascota %}Editar mascota{% else %}Nueva mascota{% endif %} — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<h1>{% if mascota %}Editar mascota{% else %}Nueva mascota{% endif %}</h1>
+
+<form method="post" class="form">
+  <label>Nombre
+    <input type="text" name="nombre" required value="{{ mascota.nombre if mascota else '' }}">
+  </label>
+
+  <label>Especie
+    <input type="text" name="especie" required placeholder="Perro, Gato..." value="{{ mascota.especie if mascota else '' }}">
+  </label>
+
+  <label>Raza
+    <input type="text" name="raza" value="{{ mascota.raza or '' if mascota else '' }}">
+  </label>
+
+  <label>Edad (años)
+    <input type="number" name="edad_anios" min="0" value="{{ mascota.edad_anios or '' if mascota else '' }}">
+  </label>
+
+  <label>Peso (kg)
+    <input type="number" name="peso_kg" min="0" step="0.1" value="{{ mascota.peso_kg or '' if mascota else '' }}">
+  </label>
+
+  <label>Condiciones previas
+    <textarea name="condiciones_previas" rows="3">{{ mascota.condiciones_previas or '' if mascota else '' }}</textarea>
+  </label>
+
+  <button type="submit" class="btn btn-primary">
+    {% if mascota %}Guardar cambios{% else %}Registrar mascota{% endif %}
+  </button>
+</form>
+{% endblock %}

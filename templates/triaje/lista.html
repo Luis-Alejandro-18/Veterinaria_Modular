@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultas de triaje — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Consultas de triaje</h1>
+  {% if usuario_actual.rol != 'veterinario' %}
+    <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">+ Nueva consulta</a>
+  {% endif %}
+</div>
+
+{% if consultas %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Fecha</th>
+      <th>Mascota</th>
+      <th>Síntomas</th>
+      <th>Urgencia</th>
+      <th>Estado</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for consulta in consultas %}
+    <tr>
+      <td>{{ consulta.fecha_creacion.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ consulta.mascota.nombre }}</td>
+      <td>{{ consulta.sintomas|truncate(60, True) }}</td>
+      <td><span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></td>
+      <td>{{ consulta.estado }}</td>
+      <td><a href="{{ url_for('triaje.detalle', consulta_id=consulta.id) }}">Ver</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No hay consultas registradas.</p>
+{% endif %}
+{% endblock %}

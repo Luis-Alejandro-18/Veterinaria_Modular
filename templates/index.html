@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Emergencias veterinarias, orientadas a tiempo</h1>
+  <p>Triaje digital, primeros auxilios y clínicas 24/7 en el Área Metropolitana de Guadalajara.</p>
+
+  <div class="actions">
+    {% if usuario_actual %}
+      <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">Iniciar triaje</a>
+      <a class="btn" href="{{ url_for('mapa.mapa') }}">Ver clínicas cercanas</a>
+    {% else %}
+      <a class="btn btn-primary" href="{{ url_for('auth.registro') }}">Crear cuenta</a>
+      <a class="btn" href="{{ url_for('auth.login') }}">Iniciar sesión</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

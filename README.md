@@ -64,7 +64,8 @@ Disponible en `http://localhost:5000`. Al iniciar, la aplicación habilita PostG
 ## Estado actual
 
 - Backend Flask con 6 tablas: `usuarios`, `mascotas`, `clinicas`, `consultas`, `evidencias`, `respuestas_orientacion`.
-- Solo existe la ruta `GET /`; el frontend está en desarrollo.
+- Endpoints de autenticación, mascotas, triaje y mapa implementados (Blueprints en `routes/`).
+- Frontend básico con plantillas Jinja2 y estilos; mapa con Leaflet.
 - Sin migraciones: las tablas se crean con `db.create_all()` al iniciar.
 
 ## Estructura del proyecto
@@ -72,9 +73,11 @@ Disponible en `http://localhost:5000`. Al iniciar, la aplicación habilita PostG
 ```
 app.py               # Servidor Flask y configuración de la BD
 models.py            # Modelos SQLAlchemy + GeoAlchemy2
+routes/              # Blueprints (auth, mascotas, triaje, mapa)
 requirements.txt     # Dependencias
 templates/           # Plantillas Jinja2
 static/css/          # Estilos
+static/uploads/      # Evidencias (creado al arrancar, no versionado)
 legacy/              # Código deprecado (database.py)
 ```
 

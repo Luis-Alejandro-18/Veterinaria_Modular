@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Mapa de clínicas — Veterinaria Modular{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<h1>Clínicas 24/7</h1>
+<p>Clínicas registradas en el Área Metropolitana de Guadalajara.</p>
+
+<div class="actions">
+  <button id="btn-cercanas" class="btn btn-primary">Buscar clínicas cercanas</button>
+</div>
+
+<div id="map" class="map"></div>
+<div id="resultados"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const mapa = L.map('map').setView([20.6736, -103.344], 11);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(mapa);
+
+  function agregarMarcadores(clinicas) {
+    clinicas.forEach(clinica => {
+      L.marker([clinica.lat, clinica.lng])
+        .addTo(mapa)
+        .bindPopup(
+          '<strong>' + clinica.nombre + '</strong><br>' +
+          clinica.direccion + '<br>' +
+          clinica.telefono +
+          (clinica.distancia_m ? '<br>Distancia: ' + clinica.distancia_m + ' m' : '')
+        );
+    });
+  }
+
+  fetch('/clinicas')
+    .then(respuesta => respuesta.json())
+    .then(agregarMarcadores);
+
+  document.getElementById('btn-cercanas').addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      alert('La geolocalización no está disponible en este navegador.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      posicion => {
+        const lat = posicion.coords.latitude;
+        const lng = posicion.coords.longitude;
+
+        fetch('/clinicas/cercanas?lat=' + lat + '&lng=' + lng + '&radio=10000')
+          .then(respuesta => respuesta.json())
+          .then(clinicas => {
+            if (clinicas.error) {
+              alert(clinicas.error);
+              return;
+            }
+
+            agregarMarcadores(clinicas);
+            mapa.setView([lat, lng], 13);
+
+            const contenedor = document.getElementById('resultados');
+            if (clinicas.length === 0) {
+              contenedor.innerHTML = '<p>No hay clínicas en un radio de 10 km.</p>';
+              return;
+            }
+
+            contenedor.innerHTML = '<h2>Clínicas cercanas</h2><ul>' +
+              clinicas.map(clinica =>
+                '<li>' + clinica.nombre + ' — ' + clinica.distancia_m + ' m — ' + clinica.telefono + '</li>'
+              ).join('') +
+              '</ul>';
+          });
+      },
+      () => alert('No se pudo obtener tu ubicación.')
+    );
+  });
+</script>
+{% endblock %}

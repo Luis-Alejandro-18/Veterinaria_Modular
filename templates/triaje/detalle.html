@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Consulta #{{ consulta.id }} — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Consulta #{{ consulta.id }}</h1>
+  <a class="btn" href="{{ url_for('triaje.lista') }}">← Volver</a>
+</div>
+
+<div class="card">
+  <p><strong>Mascota:</strong> {{ consulta.mascota.nombre }} ({{ consulta.mascota.especie }})</p>
+  <p><strong>Fecha:</strong> {{ consulta.fecha_creacion.strftime('%Y-%m-%d %H:%M') }}</p>
+  <p><strong>Urgencia:</strong> <span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></p>
+  <p><strong>Estado:</strong> {{ consulta.estado }}</p>
+  <p><strong>Síntomas:</strong></p>
+  <p class="pre-wrap">{{ consulta.sintomas }}</p>
+</div>
+
+<h2>Evidencias</h2>
+{% if consulta.evidencias %}
+  <ul class="evidence-list">
+    {% for evidencia in consulta.evidencias %}
+      <li>
+        {% if evidencia.tipo == 'imagen' %}
+          <img src="{{ url_for('static', filename=evidencia.ruta_archivo) }}" alt="Evidencia de la consulta" class="evidence-img">
+        {% else %}
+          <video src="{{ url_for('static', filename=evidencia.ruta_archivo) }}" controls class="evidence-video"></video>
+        {% endif %}
+        <small>{{ evidencia.fecha_subida.strftime('%Y-%m-%d %H:%M') }}</small>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>Sin evidencias.</p>
+{% endif %}
+
+{% if consulta.mascota.usuario_id == usuario_actual.id %}
+  <h2>Subir evidencia</h2>
+  <form method="post" action="{{ url_for('triaje.subir_evidencia', consulta_id=consulta.id) }}"
+        enctype="multipart/form-data" class="form-inline">
+    <input type="file" name="archivo" accept="image/*,video/*" required>
+    <button type="submit" class="btn">Subir</button>
+  </form>
+{% endif %}
+
+<h2>Respuestas del veterinario</h2>
+{% if consulta.respuestas %}
+  {% for respuesta in consulta.respuestas %}
+    <div class="card response">
+      <p class="pre-wrap">{{ respuesta.mensaje }}</p>
+      <small>{{ respuesta.fecha_respuesta.strftime('%Y-%m-%d %H:%M') }} — Veterinario #{{ respuesta.veterinario_id }}</small>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>Sin respuestas todavía.</p>
+{% endif %}
+
+{% if usuario_actual.rol == 'veterinario' %}
+  <h2>Responder</h2>
+  <form method="post" action="{{ url_for('triaje.responder', consulta_id=consulta.id) }}" class="form">
+    <label>Mensaje de orientación
+      <textarea name="mensaje" rows="4" required></textarea>
+    </label>
+    <button type="submit" class="btn btn-primary">Enviar respuesta</button>
+  </form>
+
+  <h2>Cambiar estado</h2>
+  <form method="post" action="{{ url_for('triaje.cambiar_estado', consulta_id=consulta.id) }}" class="form-inline">
+    <select name="estado">
+      {% for estado in ['Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada'] %}
+        <option value="{{ estado }}" {% if consulta.estado == estado %}selected{% endif %}>{{ estado }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn">Actualizar</button>
+  </form>
+{% endif %}
+{% endblock %}

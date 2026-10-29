@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Veterinaria Modular{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/estilosGlobales.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar">
+    <a href="{{ url_for('index') }}" class="brand">🐾 Veterinaria Modular</a>
+    <div class="nav-links">
+      <a href="{{ url_for('mapa.mapa') }}">Mapa</a>
+      {% if usuario_actual %}
+        <a href="{{ url_for('mascotas.lista') }}">Mis mascotas</a>
+        <a href="{{ url_for('triaje.lista') }}">Triaje</a>
+        <span class="nav-user">{{ usuario_actual.nombre }} ({{ usuario_actual.rol }})</span>
+        <form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
+          <button type="submit" class="link-button">Salir</button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">Iniciar sesión</a>
+        <a href="{{ url_for('auth.registro') }}">Registrarse</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

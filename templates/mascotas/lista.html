@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis mascotas — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Mis mascotas</h1>
+  <a class="btn btn-primary" href="{{ url_for('mascotas.nueva') }}">+ Nueva mascota</a>
+</div>
+
+{% if mascotas %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Especie</th>
+      <th>Raza</th>
+      <th>Edad</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for mascota in mascotas %}
+    <tr>
+      <td>{{ mascota.nombre }}</td>
+      <td>{{ mascota.especie }}</td>
+      <td>{{ mascota.raza or '—' }}</td>
+      <td>{{ mascota.edad_anios or '—' }}</td>
+      <td><a href="{{ url_for('mascotas.detalle', mascota_id=mascota.id) }}">Ver detalle</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Aún no tienes mascotas registradas.</p>
+{% endif %}
+{% endblock %}

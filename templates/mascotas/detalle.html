@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ mascota.nombre }} — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ mascota.nombre }}</h1>
+  <a class="btn" href="{{ url_for('mascotas.lista') }}">← Volver</a>
+</div>
+
+<dl class="detail-list">
+  <dt>Especie</dt>
+  <dd>{{ mascota.especie }}</dd>
+
+  <dt>Raza</dt>
+  <dd>{{ mascota.raza or '—' }}</dd>
+
+  <dt>Edad</dt>
+  <dd>{{ mascota.edad_anios or '—' }} años</dd>
+
+  <dt>Peso</dt>
+  <dd>{{ mascota.peso_kg or '—' }} kg</dd>
+
+  <dt>Condiciones previas</dt>
+  <dd>{{ mascota.condiciones_previas or 'Sin condiciones registradas' }}</dd>
+</dl>
+
+<div class="actions">
+  <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">Iniciar triaje</a>
+  {% if mascota.usuario_id == usuario_actual.id %}
+    <a class="btn" href="{{ url_for('mascotas.editar', mascota_id=mascota.id) }}">Editar</a>
+    <form method="post" action="{{ url_for('mascotas.eliminar', mascota_id=mascota.id) }}" class="inline-form" onsubmit="return confirm('¿Eliminar esta mascota?');">
+      <button type="submit" class="btn btn-danger">Eliminar</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
