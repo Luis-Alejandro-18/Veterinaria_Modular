@@ -1,10 +1,11 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-10-29
+> Última actualización: 2026-11-02
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
-- MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas; 1 usuario real y 12 clínicas demo (resto vacío).
+- MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas; 12 clínicas demo y sin usuarios (resto vacío).
+- Entorno de referencia probado: PostgreSQL 17.11 + PostGIS 3.6.2 y Python 3.14; cada integrante crea su propio `.venv` y `.env`.
 - Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado) y mapa (Leaflet + PostGIS).
 - Fases 1 y 2 completadas: cascadas, `veterinario_id`, hora local, cédula sin bloqueo, seed, errores 404/413/500, primeros auxilios y estados validados.
 - Fase 3 completada: CSRF con Flask-WTF, evidencias privadas en `instance/uploads/` servidas por `/triaje/evidencia/<id>`, filtros y paginación en mascotas/triaje.
@@ -27,10 +28,11 @@
 - Estados y transiciones centralizados en `constants.py`; una consulta cerrada es terminal.
 - CSRF con Flask-WTF en todos los POST; evidencias fuera de `static/` y con autorización por dueño/veterinario.
 - Filtros/paginación de 10 elementos por página para mantener el MVP simple.
+- PostgreSQL 17 + PostGIS 3.6: no hay versión de servidor fijada en el repo; el bundle de PostGIS debe coincidir con la versión mayor de PostgreSQL. Python 3.14 funciona con los pins actuales.
 
 ## Aprendizajes y errores a evitar
 - `app.py` falla silenciosamente si PostgreSQL/PostGIS no están disponibles: revisar consola.
-- La BD de desarrollo conserva 1 usuario real y 12 clínicas demo; no asumir tablas vacías.
+- La BD local varía por integrante (p. ej. 12 clínicas demo tras un seed limpio, sin usuarios); no asumir datos previos.
 - No editar `legacy/database.py`.
 - En PowerShell: `& "...\.venv\Scripts\python.exe" "script.py"`.
 - Evitar emojis en `print()` (cp1252 en Windows): usar `[OK]`/`[ERROR]`.
@@ -38,6 +40,7 @@
 - `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
 - Los tests generales desactivan CSRF; el test dedicado usa `client_csrf`. Las evidencias de prueba van a `tmp_path`.
 - No servir evidencias desde `static/uploads/`: esa ruta está bloqueada.
+- Instalador EDB desatendido: `--enable-components server,commandlinetools` (pgadmin no es un nombre válido). PostGIS se copia desde el zip sobre `C:\Program Files\PostgreSQL\17`.
 
 ## Próximos pasos
 - Fase 4: frontend (diseño, dashboard, wizard, mapa, panel veterinario).
