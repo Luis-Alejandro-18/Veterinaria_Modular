@@ -61,7 +61,7 @@ def login():
         session.clear()
         session['usuario_id'] = usuario.id
         flash(f'Bienvenido, {usuario.nombre}.', 'success')
-        return redirect(url_for('index'))
+        return redirect(url_for('main.dashboard'))
 
     return render_template('auth/login.html')
 

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — Veterinaria Modular{% endblock %}
+
+{% block content %}
+<h1>Panel de resumen</h1>
+<p>Bienvenido de nuevo, {{ usuario_actual.nombre }}.</p>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <h3>{{ mascotas_count }}</h3>
+    <p>Mascotas registradas</p>
+  </div>
+  <div class="stat-card">
+    <h3>{{ consultas_count }}</h3>
+    <p>Consultas totales</p>
+  </div>
+  <div class="stat-card stat-card-warning">
+    <h3>{{ consultas_pendientes }}</h3>
+    <p>Consultas pendientes</p>
+  </div>
+  <div class="stat-card stat-card-danger">
+    <h3>{{ consultas_urgentes }}</h3>
+    <p>Consultas urgentes activas</p>
+  </div>
+</div>
+
+<h2>Últimas consultas</h2>
+{% if ultimas_consultas %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Fecha</th>
+      <th>Mascota</th>
+      <th>Síntomas</th>
+      <th>Urgencia</th>
+      <th>Estado</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for consulta in ultimas_consultas %}
+    <tr>
+      <td>{{ consulta.fecha_creacion|local_time }}</td>
+      <td>{{ consulta.mascota.nombre }}</td>
+      <td>{{ consulta.sintomas|truncate(60, True) }}</td>
+      <td><span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></td>
+      <td>{{ consulta.estado }}</td>
+      <td><a href="{{ url_for('triaje.detalle', consulta_id=consulta.id) }}">Ver</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Aún no tienes consultas registradas.</p>
+{% endif %}
+
+<div class="actions mt-2">
+  <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">+ Nueva consulta</a>
+  <a class="btn" href="{{ url_for('mascotas.nueva') }}">+ Nueva mascota</a>
+  <a class="btn" href="{{ url_for('mapa.mapa') }}">Ver clínicas cercanas</a>
+</div>
+{% endblock %}

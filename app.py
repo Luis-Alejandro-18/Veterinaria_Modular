@@ -77,12 +77,14 @@ from routes.auth import auth_bp
 from routes.mascotas import mascotas_bp
 from routes.triaje import triaje_bp
 from routes.mapa import mapa_bp
+from routes.main import main_bp
 from routes.utils import load_logged_in_user
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(mascotas_bp)
 app.register_blueprint(triaje_bp)
 app.register_blueprint(mapa_bp)
+app.register_blueprint(main_bp)
 
 
 @app.before_request
