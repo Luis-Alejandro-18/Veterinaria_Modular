@@ -4,17 +4,51 @@
 
 {% block content %}
 <section class="hero">
-  <h1>Emergencias veterinarias, orientadas a tiempo</h1>
-  <p>Triaje digital, primeros auxilios y clínicas 24/7 en el Área Metropolitana de Guadalajara.</p>
+  <div class="hero-content">
+    <div class="hero-badge">🐾 Vet en un Click</div>
+    <h1>Vet en <span class="text-primary">un Click</span></h1>
+    <p class="hero-subtitle">Tu aliado en el cuidado de tu mascota</p>
+    <p class="hero-description">
+      Reporta el malestar de tu mascota de forma rápida, adjunta evidencia y recibe seguimiento de tu caso.
+    </p>
 
-  <div class="actions">
     {% if usuario_actual %}
-      <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">Iniciar triaje</a>
-      <a class="btn" href="{{ url_for('mapa.mapa') }}">Ver clínicas cercanas</a>
+      <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">Reportar un Caso →</a>
     {% else %}
-      <a class="btn btn-primary" href="{{ url_for('auth.registro') }}">Crear cuenta</a>
-      <a class="btn" href="{{ url_for('auth.login') }}">Iniciar sesión</a>
+      <a class="btn btn-primary" href="{{ url_for('auth.registro') }}">Reportar un Caso →</a>
     {% endif %}
+
+    <div class="hero-features">
+      <div class="feature">
+        <span class="feature-icon">⚡</span>
+        <div>
+          <strong>Rápido y sencillo</strong>
+          <p>Reporta en minutos</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🛡️</span>
+        <div>
+          <strong>Seguimiento en línea</strong>
+          <p>Conoce el estado de tu caso</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">💙</span>
+        <div>
+          <strong>Cuidado profesional</strong>
+          <p>Con el respaldo de veterinarios</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-image">
+    <div class="pet-image-placeholder">
+      <div class="pet-paw">🐾</div>
+      <div>🐕 🐱</div>
+      <div class="text-muted">Imagen de tu mascota aquí</div>
+    </div>
   </div>
 </section>
 {% endblock %}
