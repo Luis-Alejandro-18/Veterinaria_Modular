@@ -1,6 +1,6 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-11-05 (fix Overpass API aplicado)
+> Última actualización: 2026-11-05 (registro separado aplicado)
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
@@ -8,6 +8,7 @@
 - MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas.
 - Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado) y mapa (Leaflet + PostGIS).
 - Fase 4 completada (mapa): clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática al cargar, marcador de ubicación del usuario, toggle entre clínicas reales y base local, fallback automático a BD local si Overpass falla, radio de búsqueda configurable (2/5/10/20 km, default 5 km).
+- Registro separado completado: `/registro` (landing de selección), `/registro/dueno` (sin cédula), `/registro/veterinario` (cédula obligatoria).
 - Frontend mejorado: diseño con SVG icons, dashboard con estadísticas, plantillas reestructuradas.
 
 ## Decisiones (y por qué)
@@ -28,5 +29,5 @@
 - `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
 
 ## Próximos pasos
-- Fase 4 pendiente: wizard de triaje y panel veterinario (vistas).
+- Fase 4 pendiente: vista de veterinario tipo Uber (consultas disponibles y tomar consulta), chat de seguimiento entre dueño y veterinario.
 - Opcional: CI con PostgreSQL/PostGIS.
