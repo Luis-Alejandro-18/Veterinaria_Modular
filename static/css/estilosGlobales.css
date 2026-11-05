@@ -390,25 +390,13 @@ h1 { margin-top: 0; }
   align-items: center;
 }
 
-.pet-image-placeholder {
+.pet-image {
   width: 100%;
   max-width: 450px;
-  height: 300px;
-  background: var(--surface);
-  border: 2px dashed var(--border);
+  height: auto;
   border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.pet-paw {
-  font-size: 4rem;
-  opacity: 0.3;
+  box-shadow: var(--shadow-md);
+  object-fit: cover;
 }
 
 @media (max-width: 768px) {
