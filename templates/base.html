@@ -51,7 +51,7 @@
           <a href="{{ url_for('mascotas.lista') }}"{% if endpoint.startswith('mascotas.') %} aria-current="page"{% endif %}>Mis mascotas</a>
           <a href="{{ url_for('triaje.lista') }}"{% if endpoint.startswith('triaje.') %} aria-current="page"{% endif %}>Triaje</a>
           {% if usuario_actual.rol == 'veterinario' %}
-            <a href="{{ url_for('veterinario.consultas_disponibles') }}"{% if endpoint.startswith('veterinario.') %} aria-current="page"{% endif }>Consultas disponibles</a>
+            <a href="{{ url_for('veterinario.consultas_disponibles') }}"{% if endpoint.startswith('veterinario.') %} aria-current="page"{% endif %}>Consultas disponibles</a>
           {% endif %}
         {% endif %}
       </nav>
