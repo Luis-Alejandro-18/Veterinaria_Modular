@@ -1,6 +1,6 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-11-05
+> Última actualización: 2026-11-05 (fix Overpass API aplicado)
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
@@ -12,13 +12,16 @@
 
 ## Decisiones (y por qué)
 - Overpass API (OpenStreetMap) sin clave de API; gratis y sin registro.
-- Endpoint `GET /clinicas/reales?lat=&lng=&radio=` consulta `amenity=veterinary` y hace fallback a BD local si Overpass no responde.
+- Endpoint `GET /clinicas/reales?lat=&lng=&radio=` consulta `amenity=veterinary` y hace fallback a BD local si Overpass no responde o devuelve 0 elementos.
+- Consulta Overpass via GET con parametro `data` + header User-Agent (formato estandar del API).
+- Múltiples instancias de Overpass con retry: overpass-api.de y overpass.kumi.systems.
+- Timeout de 60s para consultas Overpass.
 - Distancia haversine calculada en Python para resultados de Overpass (no hay PostGIS en esa respuesta).
 - IDs de clínicas Overpass con prefijo `overpass-{tipo}-{id}` para no colisionar con IDs de BD.
 - `urllib.request` de stdlib para no añadir dependencias (`requests` no está en requirements).
 
 ## Aprendizajes y errores a evitar
-- Overpass puede estar lento o no responder; siempre tener fallback a BD local.
+- Overpass puede estar lento, no responder o rechazar peticiones sin User-Agent; siempre tener fallback a BD local.
 - Los datos de OpenStreetMap dependen de lo mapeado en cada zona; no garantiza cobertura completa de clínicas reales en el AMG.
 - No añadir claves de API al repo; Overpass no necesita clave, pero si se cambia a Google Places se usaría `.env`.
 - Los tests generales desactivan CSRF; el test dedicado usa `client_csrf`.
