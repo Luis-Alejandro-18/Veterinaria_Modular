@@ -1196,6 +1196,74 @@ textarea.in,
   margin-top: 14px;
 }
 
+/* Landing de selección de registro */
+.auth-landing {
+  width: 100%;
+  max-width: 900px;
+  margin: 24px auto;
+}
+
+.auth-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.choice-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 16px;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.choice-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary, #5a3cc2);
+}
+
+.choice-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--primary-light, #e9e3ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.choice-icon .i {
+  width: 24px;
+  height: 24px;
+  fill: var(--primary, #5a3cc2);
+}
+
+.choice-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.25rem;
+  color: var(--texto, #111827);
+}
+
+.choice-info p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--texto-suave, #6b7280);
+}
+
+.choice-arrow {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--primary, #5a3cc2);
+}
+
 /* Errores */
 .error-page {
   display: flex;

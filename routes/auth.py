@@ -7,44 +7,80 @@ from models import Usuario, db
 auth_bp = Blueprint('auth', __name__)
 
 
-@auth_bp.route('/registro', methods=['GET', 'POST'])
+@auth_bp.route('/registro', methods=['GET'])
 def registro():
+    """Página de selección de tipo de cuenta antes de registrarse."""
+    return render_template('auth/registro_landing.html')
+
+
+@auth_bp.route('/registro/dueno', methods=['GET', 'POST'])
+def registro_dueno():
+    """Registro para dueños de mascotas (sin cédula profesional)."""
     if request.method == 'POST':
         nombre = request.form.get('nombre', '').strip()
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        rol = request.form.get('rol', 'dueno')
-        cedula = request.form.get('cedula_profesional', '').strip() or None
 
         if not nombre or not email or not password:
             flash('Nombre, email y contraseña son obligatorios.', 'error')
-            return redirect(url_for('auth.registro'))
-        if rol not in ROLES:
-            flash('Rol inválido.', 'error')
-            return redirect(url_for('auth.registro'))
-        if rol == 'veterinario' and not cedula:
-            flash('La cédula profesional es obligatoria para registrarse como veterinario.', 'error')
-            return redirect(url_for('auth.registro'))
+            return redirect(url_for('auth.registro_dueno'))
         if len(password) < 6:
             flash('La contraseña debe tener al menos 6 caracteres.', 'error')
-            return redirect(url_for('auth.registro'))
+            return redirect(url_for('auth.registro_dueno'))
         if Usuario.query.filter_by(email=email).first():
             flash('Ese email ya está registrado.', 'error')
-            return redirect(url_for('auth.registro'))
+            return redirect(url_for('auth.registro_dueno'))
 
         usuario = Usuario(
             nombre=nombre,
             email=email,
             password_hash=generate_password_hash(password),
-            rol=rol,
-            cedula_profesional=cedula if rol == 'veterinario' else None,
+            rol='dueno',
+            cedula_profesional=None,
         )
         db.session.add(usuario)
         db.session.commit()
         flash('Registro exitoso. Ya puedes iniciar sesión.', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('auth/registro.html')
+    return render_template('auth/registro_dueno.html')
+
+
+@auth_bp.route('/registro/veterinario', methods=['GET', 'POST'])
+def registro_veterinario():
+    """Registro para veterinarios (cédula profesional obligatoria)."""
+    if request.method == 'POST':
+        nombre = request.form.get('nombre', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        cedula = request.form.get('cedula_profesional', '').strip() or None
+
+        if not nombre or not email or not password:
+            flash('Nombre, email y contraseña son obligatorios.', 'error')
+            return redirect(url_for('auth.registro_veterinario'))
+        if not cedula:
+            flash('La cédula profesional es obligatoria para registrarse como veterinario.', 'error')
+            return redirect(url_for('auth.registro_veterinario'))
+        if len(password) < 6:
+            flash('La contraseña debe tener al menos 6 caracteres.', 'error')
+            return redirect(url_for('auth.registro_veterinario'))
+        if Usuario.query.filter_by(email=email).first():
+            flash('Ese email ya está registrado.', 'error')
+            return redirect(url_for('auth.registro_veterinario'))
+
+        usuario = Usuario(
+            nombre=nombre,
+            email=email,
+            password_hash=generate_password_hash(password),
+            rol='veterinario',
+            cedula_profesional=cedula,
+        )
+        db.session.add(usuario)
+        db.session.commit()
+        flash('Registro exitoso. Ya puedes iniciar sesión.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/registro_veterinario.html')
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
