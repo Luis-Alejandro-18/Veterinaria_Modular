@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultas disponibles — Vet en un Click{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#pin"/></svg>
+  <div>
+    <h1>Consultas disponibles</h1>
+    <p>Consultas de triaje pendientes que puedes atender.</p>
+  </div>
+</div>
+
+{% if consultas %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Mascota</th>
+        <th>Dueño</th>
+        <th>Síntomas</th>
+        <th>Urgencia</th>
+        <th>Reportado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for consulta in consultas %}
+      <tr>
+        <td>{{ consulta.mascota.nombre }}</td>
+        <td>{{ consulta.mascota.dueno.nombre }}</td>
+        <td>{{ consulta.sintomas|truncate(60, True) }}</td>
+        <td><span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></td>
+        <td>{{ consulta.fecha_creacion|local_time }}</td>
+        <td>
+          <form method="post" action="{{ url_for('veterinario.tomar_consulta', consulta_id=consulta.id) }}" class="inline-form" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary">Tomar consulta</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card empty-state">
+  <h2>No hay consultas disponibles</h2>
+  <p>No hay consultas en estado Pendiente esperando un veterinario.</p>
+  <a class="btn" href="{{ url_for('main.dashboard') }}">Volver al panel</a>
+</div>
+{% endif %}
+
+<p class="hint">También puedes ver tus consultas atendidas en <a href="{{ url_for('veterinario.mis_consultas') }}">Mis consultas</a>.</p>
+{% endblock %}
