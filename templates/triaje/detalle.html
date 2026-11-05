@@ -126,4 +126,20 @@
     {% endif %}
   {% endif %}
 </div>
+
+<div class="card">
+  <h2>Chat de seguimiento</h2>
+  <p>Conversa directamente con el veterinario asignado a esta consulta.</p>
+  <a class="btn" href="{{ url_for('triaje.chat_historial', consulta_id=consulta.id) }}">
+    <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+    Ver historial completo
+  </a>
+  <form method="post" action="{{ url_for('triaje.chat_enviar', consulta_id=consulta.id) }}" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <input class="in" type="text" name="mensaje" placeholder="Escribe un mensaje…" required>
+    </div>
+    <button type="submit" class="btn">Enviar</button>
+  </form>
+</div>
 {% endblock %}

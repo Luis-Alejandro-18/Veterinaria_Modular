@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat — Consulta {{ consulta.id }} — Vet en un Click{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+  <div>
+    <h1>Chat de consulta #{{ consulta.id }}</h1>
+    <p>{{ consulta.mascota.nombre }} — {{ consulta.mascota.dueno.nombre }}</p>
+  </div>
+  <a class="btn" href="{{ url_for('triaje.detalle', consulta_id=consulta.id) }}">
+    <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+    Volver al detalle
+  </a>
+</div>
+
+<div class="card">
+  {% if mensajes %}
+  <div class="chat-messages" id="chat-messages">
+    {% for mensaje in mensajes %}
+    <div class="chat-message {% if mensaje.remitente_id == g.usuario.id %}chat-message-own{% else %}chat-message-theirs{% endif %}">
+      <div class="chat-message-sender">
+        {{ mensaje.remitente.nombre }}
+        <small>{{ mensaje.fecha_envio|local_time('%H:%M') }}</small>
+      </div>
+      <div class="chat-message-body">{{ mensaje.mensaje }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Aún no hay mensajes en esta consulta.</p>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('triaje.chat_enviar', consulta_id=consulta.id) }}" class="chat-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <textarea class="in" name="mensaje" rows="3" placeholder="Escribe un mensaje…" required></textarea>
+    </div>
+    <div class="actions">
+      <button type="submit" class="btn">Enviar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

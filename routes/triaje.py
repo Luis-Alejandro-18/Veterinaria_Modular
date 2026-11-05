@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 from constants import (ESTADOS_CONSULTA, ESTADO_CERRADA, NIVELES_URGENCIA,
                        TRANSICIONES_ESTADO)
 from data.primeros_auxilios import obtener_guia
-from models import Consulta, Evidencia, Mascota, RespuestaOrientacion, db
+from models import Consulta, Evidencia, Mascota, MensajeConsulta, RespuestaOrientacion, db
 from routes.utils import (login_required, puede_ver_consulta,
                           ruta_fisica_evidencia, veterinario_required)
 
@@ -249,4 +249,47 @@ def cambiar_estado(consulta_id):
         consulta.estado = nuevo_estado
         db.session.commit()
         flash('Estado actualizado.', 'success')
+    return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+
+@triaje_bp.route('/<int:consulta_id>/chat', methods=['GET'])
+@login_required
+def chat_historial(consulta_id):
+    """Historial de mensajes del chat de una consulta."""
+    consulta = Consulta.query.get_or_404(consulta_id)
+    if not puede_ver_consulta(consulta):
+        flash('No tienes permiso para ver esta consulta.', 'error')
+        return redirect(url_for('triaje.lista'))
+    mensajes = (MensajeConsulta.query
+                .filter_by(consulta_id=consulta.id)
+                .order_by(MensajeConsulta.fecha_envio.asc())
+                .all())
+    return render_template('triaje/chat_historial.html', consulta=consulta, mensajes=mensajes)
+
+
+@triaje_bp.route('/<int:consulta_id>/chat', methods=['POST'])
+@login_required
+def chat_enviar(consulta_id):
+    """Envía un mensaje al chat de una consulta."""
+    consulta = Consulta.query.get_or_404(consulta_id)
+    if not puede_ver_consulta(consulta):
+        flash('No tienes permiso para escribir en esta consulta.', 'error')
+        return redirect(url_for('triaje.lista'))
+    if consulta.estado == ESTADO_CERRADA:
+        flash('No se puede escribir en una consulta cerrada.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    mensaje = request.form.get('mensaje', '').strip()
+    if not mensaje:
+        flash('Escribe un mensaje antes de enviarlo.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    nuevo_mensaje = MensajeConsulta(
+        consulta_id=consulta.id,
+        remitente_id=g.usuario.id,
+        mensaje=mensaje,
+    )
+    db.session.add(nuevo_mensaje)
+    db.session.commit()
+    flash('Mensaje enviado.', 'success')
     return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
