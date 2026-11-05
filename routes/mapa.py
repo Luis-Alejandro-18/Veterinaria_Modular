@@ -1,6 +1,7 @@
 from math import radians, sin, cos, sqrt, atan2
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from flask import Blueprint, jsonify, render_template, request
@@ -11,14 +12,20 @@ from models import db
 mapa_bp = Blueprint('mapa', __name__)
 
 # Overpass API (OpenStreetMap) — sin clave de API requerida.
-OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter'
-OVERPASS_TIMEOUT = 30
+# Lista de instancias públicas con fallback entre ellas.
+OVERPASS_ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+]
+OVERPASS_TIMEOUT = 60
+OVERPASS_USER_AGENT = 'VeterinariaModular/1.0 (contacto: ejemplo@test.local)'
 
 OVERPASS_QUERY = """
 [out:json][timeout:{timeout}];
 (
   node["amenity"="veterinary"](around:{radio},{lat},{lng});
   way["amenity"="veterinary"](around:{radio},{lat},{lng});
+  relation["amenity"="veterinary"](around:{radio},{lat},{lng});
 );
 out center;
 """
@@ -64,22 +71,28 @@ def _distancia_metros(lat1, lng1, lat2, lng2):
 
 
 def _consultar_overpass(lat, lng, radio=10000):
-    """Consulta Overpass API para clínicas veterinarias cercanas."""
+    """Consulta Overpass API para clínicas veterinarias cercanas.
+
+    Prueba varias instancias públicas y usa GET con el parametro data
+    (formato estándar de Overpass). Retorna None si todas fallan.
+    """
     query = OVERPASS_QUERY.format(
         timeout=OVERPASS_TIMEOUT, radio=radio, lat=lat, lng=lng
     )
-    cuerpo = json.dumps({'data': query}).encode('utf-8')
-    req = urllib.request.Request(
-        OVERPASS_ENDPOINT,
-        data=cuerpo,
-        headers={'Content-Type': 'application/json'},
-        method='POST',
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=OVERPASS_TIMEOUT) as resp:
-            return json.loads(resp.read().decode('utf-8'))
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
-        return None
+    codificado = urllib.parse.quote(query)
+
+    for endpoint in OVERPASS_ENDPOINTS:
+        url = endpoint + '?data=' + codificado
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': OVERPASS_USER_AGENT},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=OVERPASS_TIMEOUT) as resp:
+                return json.loads(resp.read().decode('utf-8'))
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
+            continue
+    return None
 
 
 def _mapear_elemento_overpass(elemento, lat_ref, lng_ref):
@@ -196,8 +209,10 @@ def clinicas_reales():
 
     datos = _consultar_overpass(lat, lng, radio)
 
-    if datos is None:
-        # Fallback a BD local si Overpass no está disponible.
+    # Si Overpass no responde O devuelve 0 elementos, usar BD local como fallback.
+    elementos = datos.get('elements', []) if datos else []
+
+    if not elementos:
         filas = db.session.execute(
             text(SQL_CERCANAS),
             {'lat': lat, 'lng': lng, 'radio': radio},
@@ -221,7 +236,7 @@ def clinicas_reales():
         })
 
     clinicas = []
-    for elemento in datos.get('elements', []):
+    for elemento in elementos:
         mapeado = _mapear_elemento_overpass(elemento, lat, lng)
         if mapeado is not None:
             clinicas.append(mapeado)
