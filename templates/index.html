@@ -1,54 +1,73 @@
 {% extends 'base.html' %}
 
-{% block title %}Inicio — Veterinaria Modular{% endblock %}
+{% block title %}Inicio — Vet en un Click{% endblock %}
+
+{% block navbar %}{% endblock %}
 
 {% block content %}
+<nav class="top-nav">
+  <div class="nav-brand">🐾 Vet en un Click</div>
+  <div class="nav-links">
+    <a href="{{ url_for('index') }}" class="nav-link active">Inicio</a>
+    <a href="{{ url_for('mapa.mapa') }}" class="nav-link">Clínicas</a>
+    {% if usuario_actual %}
+      <a href="{{ url_for('main.dashboard') }}" class="nav-link">Dashboard</a>
+      <a href="{{ url_for('mascotas.lista') }}" class="nav-link">Mis Mascotas</a>
+      <span class="nav-divider"></span>
+      <a href="{{ url_for('auth.logout') }}" class="nav-link logout">Cerrar sesión</a>
+    {% else %}
+      <a href="{{ url_for('auth.login') }}" class="nav-link btn-outline">Iniciar sesión</a>
+      <a href="{{ url_for('auth.registro') }}" class="nav-link btn-primary">Crear cuenta</a>
+    {% endif %}
+  </div>
+</nav>
+
 <section class="hero">
   <div class="hero-content">
-    <div class="hero-badge">🐾 Vet en un Click</div>
-    <h1>Vet en <span class="text-primary">un Click</span></h1>
-    <p class="hero-subtitle">Tu aliado en el cuidado de tu mascota</p>
-    <p class="hero-description">
-      Reporta el malestar de tu mascota de forma rápida, adjunta evidencia y recibe seguimiento de tu caso.
+    <h1>Encuentra la atención que necesita tu mascota</h1>
+    <p class="hero-subtitle">
+      Describe qué le pasa o a quién buscas, y te ayudaremos a agendar una cita.
     </p>
 
-    {% if usuario_actual %}
-      <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">Reportar un Caso →</a>
-    {% else %}
-      <a class="btn btn-primary" href="{{ url_for('auth.registro') }}">Reportar un Caso →</a>
-    {% endif %}
+    <div class="search-tabs">
+      <button class="tab-btn active" data-tab="clasica">Búsqueda clásica</button>
+      <button class="tab-btn" data-tab="inteligente">Búsqueda inteligente</button>
+    </div>
 
-    <div class="hero-features">
-      <div class="feature">
-        <span class="feature-icon">⚡</span>
-        <div>
-          <strong>Rápido y sencillo</strong>
-          <p>Reporta en minutos</p>
-        </div>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">🛡️</span>
-        <div>
-          <strong>Seguimiento en línea</strong>
-          <p>Conoce el estado de tu caso</p>
-        </div>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">💙</span>
-        <div>
-          <strong>Cuidado profesional</strong>
-          <p>Con el respaldo de veterinarios</p>
-        </div>
-      </div>
+    <div class="search-bar">
+      <input type="text" class="search-input" placeholder="Síntomas, especialidad o nombre de la clínica">
+      <input type="text" class="search-input" placeholder="Ciudad o en línea">
+      <button class="search-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </button>
+    </div>
+
+    <div class="specialties">
+      <span class="chip active">Perro</span>
+      <span class="chip">Gato</span>
+      <span class="chip">Urgencia</span>
+      <span class="chip">Consulta General</span>
+      <span class="chip">Vacunación</span>
+      <span class="chip">Cirugía</span>
+      <span class="chip">Hospitalización</span>
+      <span class="chip">Mostrar más</span>
     </div>
   </div>
 
   <div class="hero-image">
-    <img
-      src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=600&q=80"
-      alt="Perro y gato"
-      class="pet-image"
-    >
+    <div class="pets-illustration">
+      <div class="pet">🐕</div>
+      <div class="pet">🐱</div>
+      <div class="pet">🐰</div>
+      <div class="pet">🐦</div>
+    </div>
   </div>
+</section>
+
+<section class="info">
+  <p class="info-text">
+    Te conectamos con especialistas: no diagnosticamos ni damos asesoría médica. Tu profesional de la salud guiará tu atención.
+    Al enviar mensajes a Vet en un Click, aceptas nuestros <a href="#">Términos y condiciones</a> y nuestra <a href="#">Política de Privacidad</a>.
+  </p>
 </section>
 {% endblock %}

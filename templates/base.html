@@ -8,6 +8,7 @@
   {% block head %}{% endblock %}
 </head>
 <body>
+  {% block navbar %}
   <nav class="navbar">
     <a href="{{ url_for('index') }}" class="brand">🐾 Vet en un Click</a>
     <div class="nav-links">
@@ -27,6 +28,7 @@
       {% endif %}
     </div>
   </nav>
+  {% endblock %}
 
   <main class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
