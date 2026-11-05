@@ -1,56 +1,75 @@
 {% extends 'base.html' %}
 
-{% block title %}Mis mascotas — Veterinaria Modular{% endblock %}
+{% block title %}Mis mascotas — Vet en un Click{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>Mis mascotas</h1>
-  <a class="btn btn-primary" href="{{ url_for('mascotas.nueva') }}">+ Nueva mascota</a>
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+  <div>
+    <h1>Mis mascotas</h1>
+    <p>Administra los datos de tus compañeros.</p>
+  </div>
+  <a class="btn" href="{{ url_for('mascotas.nueva') }}">
+    <svg class="i" aria-hidden="true"><use href="#plus"/></svg>
+    Nueva mascota
+  </a>
 </div>
 
-<form method="get" class="filters">
-  <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre, especie o raza">
-  <input type="text" name="especie" value="{{ especie }}" placeholder="Filtrar por especie">
-  <button type="submit" class="btn">Filtrar</button>
-  <a class="btn" href="{{ url_for('mascotas.lista') }}">Limpiar</a>
-</form>
+<div class="card filters-card">
+  <form method="get" class="filters">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre, especie o raza" aria-label="Buscar mascotas">
+    <input type="text" name="especie" value="{{ especie }}" placeholder="Filtrar por especie" aria-label="Filtrar por especie">
+    <button type="submit" class="btn">
+      <svg class="i" aria-hidden="true"><use href="#search"/></svg>
+      Filtrar
+    </button>
+    <a class="btn ghost" href="{{ url_for('mascotas.lista') }}">Limpiar</a>
+  </form>
+</div>
 
 {% if mascotas %}
-<table class="table">
-  <thead>
-    <tr>
-      <th>Nombre</th>
-      <th>Especie</th>
-      <th>Raza</th>
-      <th>Edad</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for mascota in mascotas %}
-    <tr>
-      <td>{{ mascota.nombre }}</td>
-      <td>{{ mascota.especie }}</td>
-      <td>{{ mascota.raza or '—' }}</td>
-      <td>{{ mascota.edad_anios or '—' }}</td>
-      <td><a href="{{ url_for('mascotas.detalle', mascota_id=mascota.id) }}">Ver detalle</a></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Especie</th>
+        <th>Raza</th>
+        <th>Edad</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mascota in mascotas %}
+      <tr>
+        <td>{{ mascota.nombre }}</td>
+        <td>{{ mascota.especie }}</td>
+        <td>{{ mascota.raza or '—' }}</td>
+        <td>{{ mascota.edad_anios or '—' }}</td>
+        <td><a href="{{ url_for('mascotas.detalle', mascota_id=mascota.id) }}">Ver detalle</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 <p class="hint">{{ paginacion.total }} mascota(s) encontrada(s).</p>
+
 {% if paginacion.pages > 1 %}
-<nav class="pagination">
+<nav class="pagination" aria-label="Paginación de mascotas">
   {% if paginacion.has_prev %}
-    <a class="btn" href="{{ url_for('mascotas.lista', page=paginacion.prev_num, q=q, especie=especie) }}">← Anterior</a>
+    <a class="btn ghost" href="{{ url_for('mascotas.lista', page=paginacion.prev_num, q=q, especie=especie) }}">← Anterior</a>
   {% endif %}
   <span>Página {{ paginacion.page }} de {{ paginacion.pages }}</span>
   {% if paginacion.has_next %}
-    <a class="btn" href="{{ url_for('mascotas.lista', page=paginacion.next_num, q=q, especie=especie) }}">Siguiente →</a>
+    <a class="btn ghost" href="{{ url_for('mascotas.lista', page=paginacion.next_num, q=q, especie=especie) }}">Siguiente →</a>
   {% endif %}
 </nav>
 {% endif %}
 {% else %}
-<p>{% if q or especie %}No hay mascotas que coincidan con los filtros.{% else %}Aún no tienes mascotas registradas.{% endif %}</p>
+<div class="card empty-state">
+  <h2>{% if q or especie %}Sin resultados{% else %}Aún no tienes mascotas{% endif %}</h2>
+  <p>{% if q or especie %}No hay mascotas que coincidan con los filtros.{% else %}Registra a tu primera mascota para empezar un triaje.{% endif %}</p>
+</div>
 {% endif %}
 {% endblock %}

@@ -1,26 +1,44 @@
 {% extends 'base.html' %}
 
-{% block title %}Consulta #{{ consulta.id }} — Veterinaria Modular{% endblock %}
+{% block title %}Consulta #{{ consulta.id }} — Vet en un Click{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>Consulta #{{ consulta.id }}</h1>
-  <a class="btn" href="{{ url_for('triaje.lista') }}">← Volver</a>
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#clip"/></svg>
+  <div>
+    <h1>Consulta #{{ consulta.id }}</h1>
+    <p>{{ consulta.mascota.nombre }} · {{ consulta.fecha_creacion|local_time }}</p>
+  </div>
+  <a class="btn ghost" href="{{ url_for('triaje.lista') }}">
+    <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+    Volver
+  </a>
 </div>
 
 <div class="card">
-  <p><strong>Mascota:</strong> {{ consulta.mascota.nombre }} ({{ consulta.mascota.especie }})</p>
-  <p><strong>Fecha:</strong> {{ consulta.fecha_creacion|local_time }}</p>
-  <p><strong>Urgencia:</strong> <span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></p>
-  <p><strong>Estado:</strong> {{ consulta.estado }}</p>
-  {% if consulta.veterinario %}
-    <p><strong>Atendida por:</strong> {{ consulta.veterinario.nombre }}</p>
-  {% endif %}
-  <p><strong>Síntomas:</strong></p>
-  <p class="pre-wrap">{{ consulta.sintomas }}</p>
+  <div class="meta-row">
+    <span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span>
+    <span class="pill">{{ consulta.estado }}</span>
+    {% if consulta.veterinario %}
+      <span class="pill">Atendida por {{ consulta.veterinario.nombre }}</span>
+    {% endif %}
+  </div>
+
+  <dl class="detail-list mt-2">
+    <dt>Mascota</dt>
+    <dd>{{ consulta.mascota.nombre }} ({{ consulta.mascota.especie }})</dd>
+
+    <dt>Fecha</dt>
+    <dd>{{ consulta.fecha_creacion|local_time }}</dd>
+
+    <dt>Veterinario</dt>
+    <dd>{{ consulta.veterinario.nombre if consulta.veterinario else 'Sin asignar' }}</dd>
+  </dl>
+
+  <div class="symptom-box">{{ consulta.sintomas }}</div>
 </div>
 
-<div class="card first-aid first-aid-{{ (consulta.nivel_urgencia or 'Leve')|lower }}">
+<div class="first-aid first-aid-{{ (consulta.nivel_urgencia or 'Leve')|lower }}">
   <h2>{{ guia.titulo }}</h2>
   <p>{{ guia.resumen }}</p>
   <ol>
@@ -31,69 +49,81 @@
   <p class="first-aid-warning">{{ guia.advertencia }}</p>
 </div>
 
-<h2>Evidencias</h2>
-{% if consulta.evidencias %}
-  <ul class="evidence-list">
-    {% for evidencia in consulta.evidencias %}
-      <li>
-        {% if evidencia.tipo == 'imagen' %}
-          <img src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}" alt="Evidencia de la consulta" class="evidence-img">
-        {% else %}
-          <video src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}" controls class="evidence-video"></video>
-        {% endif %}
-        <small>{{ evidencia.fecha_subida|local_time }}</small>
-      </li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p>Sin evidencias.</p>
-{% endif %}
-
-{% if consulta.mascota.usuario_id == usuario_actual.id and estados_disponibles %}
-  <h2>Subir evidencia</h2>
-  <form method="post" action="{{ url_for('triaje.subir_evidencia', consulta_id=consulta.id) }}"
-        enctype="multipart/form-data" class="form-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="file" name="archivo" accept="image/*,video/*" required>
-    <button type="submit" class="btn">Subir</button>
-  </form>
-{% endif %}
-
-<h2>Respuestas del veterinario</h2>
-{% if consulta.respuestas %}
-  {% for respuesta in consulta.respuestas %}
-    <div class="card response">
-      <p class="pre-wrap">{{ respuesta.mensaje }}</p>
-      <small>{{ respuesta.fecha_respuesta|local_time }} — {{ respuesta.veterinario.nombre if respuesta.veterinario else 'Veterinario' }}</small>
-    </div>
-  {% endfor %}
-{% else %}
-  <p>Sin respuestas todavía.</p>
-{% endif %}
-
-{% if usuario_actual.rol == 'veterinario' %}
-  {% if estados_disponibles %}
-    <h2>Responder</h2>
-    <form method="post" action="{{ url_for('triaje.responder', consulta_id=consulta.id) }}" class="form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Mensaje de orientación
-        <textarea name="mensaje" rows="4" required></textarea>
-      </label>
-      <button type="submit" class="btn btn-primary">Enviar respuesta</button>
-    </form>
-
-    <h2>Cambiar estado</h2>
-    <form method="post" action="{{ url_for('triaje.cambiar_estado', consulta_id=consulta.id) }}" class="form-inline">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <select name="estado">
-        {% for estado in estados_disponibles %}
-          <option value="{{ estado }}">{{ estado }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit" class="btn">Actualizar</button>
-    </form>
+<div class="card">
+  <h2>Evidencias</h2>
+  {% if consulta.evidencias %}
+    <ul class="evidence-list mt-2">
+      {% for evidencia in consulta.evidencias %}
+        <li>
+          {% if evidencia.tipo == 'imagen' %}
+            <img src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}" alt="Evidencia de la consulta" class="evidence-img">
+          {% else %}
+            <video src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}" controls class="evidence-video"></video>
+          {% endif %}
+          <small class="hint">{{ evidencia.fecha_subida|local_time }}</small>
+        </li>
+      {% endfor %}
+    </ul>
   {% else %}
-    <p>La consulta está cerrada. No se pueden enviar más respuestas ni cambiar el estado.</p>
+    <p class="hint mt-2">Sin evidencias.</p>
   {% endif %}
-{% endif %}
+
+  {% if consulta.mascota.usuario_id == usuario_actual.id and estados_disponibles %}
+    <h3 class="mt-2">Subir evidencia</h3>
+    <form method="post" action="{{ url_for('triaje.subir_evidencia', consulta_id=consulta.id) }}"
+          enctype="multipart/form-data" class="form-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="file" name="archivo" accept="image/*,video/*" required>
+      <button type="submit" class="btn">Subir</button>
+    </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Respuestas del veterinario</h2>
+  {% if consulta.respuestas %}
+    <div class="mt-2">
+      {% for respuesta in consulta.respuestas %}
+        <div class="response">
+          <p class="pre-wrap">{{ respuesta.mensaje }}</p>
+          <small>{{ respuesta.fecha_respuesta|local_time }} — {{ respuesta.veterinario.nombre if respuesta.veterinario else 'Veterinario' }}</small>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="hint mt-2">Sin respuestas todavía.</p>
+  {% endif %}
+
+  {% if usuario_actual.rol == 'veterinario' %}
+    {% if estados_disponibles %}
+      <h3 class="mt-2">Responder</h3>
+      <form method="post" action="{{ url_for('triaje.responder', consulta_id=consulta.id) }}" class="form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label for="mensaje">Mensaje de orientación</label>
+          <textarea class="in" id="mensaje" name="mensaje" rows="4" required></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn">
+            <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+            Enviar respuesta
+          </button>
+        </div>
+      </form>
+
+      <h3 class="mt-2">Cambiar estado</h3>
+      <form method="post" action="{{ url_for('triaje.cambiar_estado', consulta_id=consulta.id) }}" class="form-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select name="estado" aria-label="Nuevo estado">
+          {% for estado in estados_disponibles %}
+            <option value="{{ estado }}">{{ estado }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn">Actualizar</button>
+      </form>
+    {% else %}
+      <p class="hint mt-2">La consulta está cerrada. No se pueden enviar más respuestas ni cambiar el estado.</p>
+    {% endif %}
+  {% endif %}
+</div>
 {% endblock %}

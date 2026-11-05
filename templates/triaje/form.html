@@ -1,35 +1,63 @@
 {% extends 'base.html' %}
 
-{% block title %}Nuevo triaje — Veterinaria Modular{% endblock %}
+{% block title %}Nuevo triaje — Vet en un Click{% endblock %}
 
 {% block content %}
-<h1>Nuevo triaje</h1>
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+  <div>
+    <h1>Nuevo triaje</h1>
+    <p>Describe lo que le sucede a tu mascota para orientar la urgencia.</p>
+  </div>
+  <a class="btn ghost" href="{{ url_for('triaje.lista') }}">
+    <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+    Volver
+  </a>
+</div>
 
 {% if mascotas %}
-<form method="post" class="form">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <label>Mascota
-    <select name="mascota_id" required>
-      <option value="">Selecciona una mascota</option>
-      {% for mascota in mascotas %}
-        <option value="{{ mascota.id }}">{{ mascota.nombre }} ({{ mascota.especie }})</option>
-      {% endfor %}
-    </select>
-  </label>
+<div class="card">
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-  <label>Describe los síntomas
-    <textarea name="sintomas" rows="5" required placeholder="Ej: mi perro vomita y tiene fiebre desde ayer..."></textarea>
-  </label>
+    <div class="field">
+      <label for="mascota_id">Mascota <span class="req">*</span></label>
+      <select class="in" id="mascota_id" name="mascota_id" required>
+        <option value="">Selecciona una mascota</option>
+        {% for mascota in mascotas %}
+          <option value="{{ mascota.id }}">{{ mascota.nombre }} ({{ mascota.especie }})</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <label class="checkbox">
-    <input type="checkbox" name="acepta_terminos_triage" required>
-    Acepto que esta orientación es un triaje preliminar y no sustituye un diagnóstico veterinario.
-  </label>
+    <div class="field">
+      <label for="sintomas">Describe los síntomas <span class="req">*</span></label>
+      <textarea class="in" id="sintomas" name="sintomas" rows="5" required placeholder="Ej: mi perro vomita y tiene fiebre desde ayer..."></textarea>
+      <small class="hint">Cuanto más detalle, mejor será la orientación preliminar.</small>
+    </div>
 
-  <button type="submit" class="btn btn-primary">Enviar consulta</button>
-</form>
+    <label class="checkbox">
+      <input type="checkbox" name="acepta_terminos_triage" required>
+      Acepto que esta orientación es un triaje preliminar y no sustituye un diagnóstico veterinario.
+    </label>
+
+    <div class="actions">
+      <a class="btn ghost" href="{{ url_for('triaje.lista') }}">Cancelar</a>
+      <button type="submit" class="btn">
+        <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+        Enviar consulta
+      </button>
+    </div>
+  </form>
+</div>
 {% else %}
-<p>Primero registra una mascota para poder iniciar un triaje.</p>
-<a class="btn btn-primary" href="{{ url_for('mascotas.nueva') }}">+ Nueva mascota</a>
+<div class="card empty-state">
+  <h2>Primero registra una mascota</h2>
+  <p>Necesitas al menos una mascota para poder iniciar un triaje.</p>
+  <a class="btn" href="{{ url_for('mascotas.nueva') }}">
+    <svg class="i" aria-hidden="true"><use href="#plus"/></svg>
+    Nueva mascota
+  </a>
+</div>
 {% endif %}
 {% endblock %}

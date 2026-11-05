@@ -1,14 +1,22 @@
 {% extends 'base.html' %}
 
-{% block title %}Página no encontrada — Veterinaria Modular{% endblock %}
+{% block title %}Página no encontrada — Vet en un Click{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <h1>404</h1>
+<div class="card error-page">
+  <svg class="i" aria-hidden="true" style="width:56px;height:56px;color:var(--brand)"><use href="#search"/></svg>
+  <span class="error-code">404</span>
+  <h1>Página no encontrada</h1>
   <p>La página que buscas no existe o fue movida.</p>
   <div class="actions">
-    <a class="btn btn-primary" href="{{ url_for('index') }}">Volver al inicio</a>
-    <a class="btn" href="{{ url_for('mapa.mapa') }}">Ver el mapa</a>
+    <a class="btn" href="{{ url_for('index') }}">
+      <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+      Volver al inicio
+    </a>
+    <a class="btn ghost" href="{{ url_for('mapa.mapa') }}">
+      <svg class="i" aria-hidden="true"><use href="#pin"/></svg>
+      Ver el mapa
+    </a>
   </div>
-</section>
+</div>
 {% endblock %}

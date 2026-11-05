@@ -1,71 +1,90 @@
 {% extends 'base.html' %}
 
-{% block title %}Consultas de triaje — Veterinaria Modular{% endblock %}
+{% block title %}Consultas de triaje — Vet en un Click{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>Consultas de triaje</h1>
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#clip"/></svg>
+  <div>
+    <h1>Consultas de triaje</h1>
+    <p>Revisa el estado y la urgencia de cada caso.</p>
+  </div>
   {% if usuario_actual.rol != 'veterinario' %}
-    <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">+ Nueva consulta</a>
+    <a class="btn" href="{{ url_for('triaje.nueva') }}">
+      <svg class="i" aria-hidden="true"><use href="#plus"/></svg>
+      Nueva consulta
+    </a>
   {% endif %}
 </div>
 
-<form method="get" class="filters">
-  <input type="search" name="q" value="{{ q }}" placeholder="Buscar mascota o síntomas">
-  <select name="estado">
-    <option value="">Todos los estados</option>
-    {% for opcion in estados %}
-      <option value="{{ opcion }}" {% if estado == opcion %}selected{% endif %}>{{ opcion }}</option>
-    {% endfor %}
-  </select>
-  <select name="urgencia">
-    <option value="">Todas las urgencias</option>
-    {% for opcion in niveles %}
-      <option value="{{ opcion }}" {% if urgencia == opcion %}selected{% endif %}>{{ opcion }}</option>
-    {% endfor %}
-  </select>
-  <button type="submit" class="btn">Filtrar</button>
-  <a class="btn" href="{{ url_for('triaje.lista') }}">Limpiar</a>
-</form>
+<div class="card filters-card">
+  <form method="get" class="filters">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar mascota o síntomas" aria-label="Buscar consultas">
+    <select name="estado" aria-label="Filtrar por estado">
+      <option value="">Todos los estados</option>
+      {% for opcion in estados %}
+        <option value="{{ opcion }}" {% if estado == opcion %}selected{% endif %}>{{ opcion }}</option>
+      {% endfor %}
+    </select>
+    <select name="urgencia" aria-label="Filtrar por urgencia">
+      <option value="">Todas las urgencias</option>
+      {% for opcion in niveles %}
+        <option value="{{ opcion }}" {% if urgencia == opcion %}selected{% endif %}>{{ opcion }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn">
+      <svg class="i" aria-hidden="true"><use href="#search"/></svg>
+      Filtrar
+    </button>
+    <a class="btn ghost" href="{{ url_for('triaje.lista') }}">Limpiar</a>
+  </form>
+</div>
 
 {% if consultas %}
-<table class="table">
-  <thead>
-    <tr>
-      <th>Fecha</th>
-      <th>Mascota</th>
-      <th>Síntomas</th>
-      <th>Urgencia</th>
-      <th>Estado</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for consulta in consultas %}
-    <tr>
-      <td>{{ consulta.fecha_creacion|local_time }}</td>
-      <td>{{ consulta.mascota.nombre }}</td>
-      <td>{{ consulta.sintomas|truncate(60, True) }}</td>
-      <td><span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></td>
-      <td>{{ consulta.estado }}</td>
-      <td><a href="{{ url_for('triaje.detalle', consulta_id=consulta.id) }}">Ver</a></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Mascota</th>
+        <th>Síntomas</th>
+        <th>Urgencia</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for consulta in consultas %}
+      <tr>
+        <td>{{ consulta.fecha_creacion|local_time }}</td>
+        <td>{{ consulta.mascota.nombre }}</td>
+        <td>{{ consulta.sintomas|truncate(60, True) }}</td>
+        <td><span class="badge badge-{{ consulta.nivel_urgencia|lower }}">{{ consulta.nivel_urgencia }}</span></td>
+        <td>{{ consulta.estado }}</td>
+        <td><a href="{{ url_for('triaje.detalle', consulta_id=consulta.id) }}">Ver</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 <p class="hint">{{ paginacion.total }} consulta(s) encontrada(s).</p>
+
 {% if paginacion.pages > 1 %}
-<nav class="pagination">
+<nav class="pagination" aria-label="Paginación de consultas">
   {% if paginacion.has_prev %}
-    <a class="btn" href="{{ url_for('triaje.lista', page=paginacion.prev_num, q=q, estado=estado, urgencia=urgencia) }}">← Anterior</a>
+    <a class="btn ghost" href="{{ url_for('triaje.lista', page=paginacion.prev_num, q=q, estado=estado, urgencia=urgencia) }}">← Anterior</a>
   {% endif %}
   <span>Página {{ paginacion.page }} de {{ paginacion.pages }}</span>
   {% if paginacion.has_next %}
-    <a class="btn" href="{{ url_for('triaje.lista', page=paginacion.next_num, q=q, estado=estado, urgencia=urgencia) }}">Siguiente →</a>
+    <a class="btn ghost" href="{{ url_for('triaje.lista', page=paginacion.next_num, q=q, estado=estado, urgencia=urgencia) }}">Siguiente →</a>
   {% endif %}
 </nav>
 {% endif %}
 {% else %}
-<p>{% if q or estado or urgencia %}No hay consultas que coincidan con los filtros.{% else %}No hay consultas registradas.{% endif %}</p>
+<div class="card empty-state">
+  <h2>Sin consultas</h2>
+  <p>{% if q or estado or urgencia %}No hay consultas que coincidan con los filtros.{% else %}Aún no hay consultas registradas.{% endif %}</p>
+</div>
 {% endif %}
 {% endblock %}

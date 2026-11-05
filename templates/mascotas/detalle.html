@@ -1,34 +1,46 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ mascota.nombre }} — Veterinaria Modular{% endblock %}
+{% block title %}{{ mascota.nombre }} — Vet en un Click{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>{{ mascota.nombre }}</h1>
-  <a class="btn" href="{{ url_for('mascotas.lista') }}">← Volver</a>
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+  <div>
+    <h1>{{ mascota.nombre }}</h1>
+    <p>{{ mascota.especie }}{% if mascota.raza %} · {{ mascota.raza }}{% endif %}</p>
+  </div>
+  <a class="btn ghost" href="{{ url_for('mascotas.lista') }}">
+    <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+    Volver
+  </a>
 </div>
 
-<dl class="detail-list">
-  <dt>Especie</dt>
-  <dd>{{ mascota.especie }}</dd>
+<div class="card">
+  <dl class="detail-list">
+    <dt>Especie</dt>
+    <dd>{{ mascota.especie }}</dd>
 
-  <dt>Raza</dt>
-  <dd>{{ mascota.raza or '—' }}</dd>
+    <dt>Raza</dt>
+    <dd>{{ mascota.raza or '—' }}</dd>
 
-  <dt>Edad</dt>
-  <dd>{{ mascota.edad_anios or '—' }} años</dd>
+    <dt>Edad</dt>
+    <dd>{{ mascota.edad_anios or '—' }} años</dd>
 
-  <dt>Peso</dt>
-  <dd>{{ mascota.peso_kg or '—' }} kg</dd>
+    <dt>Peso</dt>
+    <dd>{{ mascota.peso_kg or '—' }} kg</dd>
 
-  <dt>Condiciones previas</dt>
-  <dd>{{ mascota.condiciones_previas or 'Sin condiciones registradas' }}</dd>
-</dl>
+    <dt>Condiciones previas</dt>
+    <dd>{{ mascota.condiciones_previas or 'Sin condiciones registradas' }}</dd>
+  </dl>
+</div>
 
 <div class="actions">
-  <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">Iniciar triaje</a>
+  <a class="btn" href="{{ url_for('triaje.nueva') }}">
+    <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+    Iniciar triaje
+  </a>
   {% if mascota.usuario_id == usuario_actual.id %}
-    <a class="btn" href="{{ url_for('mascotas.editar', mascota_id=mascota.id) }}">Editar</a>
+    <a class="btn ghost" href="{{ url_for('mascotas.editar', mascota_id=mascota.id) }}">Editar</a>
     <form method="post" action="{{ url_for('mascotas.eliminar', mascota_id=mascota.id) }}" class="inline-form" onsubmit="return confirm('¿Eliminar esta mascota?');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-danger">Eliminar</button>

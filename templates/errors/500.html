@@ -1,13 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}Error interno — Veterinaria Modular{% endblock %}
+{% block title %}Error interno — Vet en un Click{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <h1>500</h1>
+<div class="card error-page">
+  <svg class="i" aria-hidden="true" style="width:56px;height:56px;color:var(--brand)"><use href="#alert"/></svg>
+  <span class="error-code">500</span>
+  <h1>Error interno</h1>
   <p>Ocurrió un error inesperado. Intenta de nuevo en unos momentos.</p>
   <div class="actions">
-    <a class="btn btn-primary" href="{{ url_for('index') }}">Volver al inicio</a>
+    <a class="btn" href="{{ url_for('index') }}">
+      <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+      Volver al inicio
+    </a>
   </div>
-</section>
+</div>
 {% endblock %}
