@@ -27,6 +27,16 @@
       </select>
     </div>
 
+    <div class="filtro-radio">
+      <label for="radio-busqueda">Radio:</label>
+      <select id="radio-busqueda" name="radio-busqueda">
+        <option value="2000">2 km</option>
+        <option value="5000" selected>5 km</option>
+        <option value="10000">10 km</option>
+        <option value="20000">20 km</option>
+      </select>
+    </div>
+
     <button id="btn-cercanas" type="button" class="btn">
       <svg class="i" aria-hidden="true"><use href="#search"/></svg>
       Actualizar cercanas
@@ -53,6 +63,9 @@
     const contenedor = document.getElementById('resultados');
     const boton = document.getElementById('btn-cercanas');
     const selectFuente = document.getElementById('fuente-datos');
+    const selectRadio = document.getElementById('radio-busqueda');
+
+    let radioSeleccionado = parseInt(selectRadio.value, 10) || 5000;
 
     const mapa = L.map(contenedorMapa).setView([20.6736, -103.344], 11);
 
@@ -155,7 +168,7 @@
       if (clinicas.length === 0) {
         const vacio = document.createElement('p');
         vacio.className = 'hint';
-        vacio.textContent = 'No se encontraron clínicas cercanas.';
+        vacio.textContent = 'No se encontraron clínicas en un radio de ' + radioKmLabel() + ' km.';
         contenedor.appendChild(vacio);
         return;
       }
@@ -181,17 +194,20 @@
     }
 
     function cargarCercanas(lat, lng, fuente) {
+      radioSeleccionado = parseInt(selectRadio.value, 10) || 5000;
+      const radioKm = (radioSeleccionado / 1000).toFixed(0);
+
       let url;
       if (fuente === 'reales') {
         url = urlReales + '?lat=' + encodeURIComponent(lat) +
-              '&lng=' + encodeURIComponent(lng) + '&radio=10000';
+              '&lng=' + encodeURIComponent(lng) + '&radio=' + radioSeleccionado;
       } else {
         url = urlCercanas + '?lat=' + encodeURIComponent(lat) +
-              '&lng=' + encodeURIComponent(lng) + '&radio=10000';
+              '&lng=' + encodeURIComponent(lng) + '&radio=' + radioSeleccionado;
       }
 
       boton.disabled = true;
-      mostrarMensaje('Buscando clínicas cercanas…');
+      mostrarMensaje('Buscando clínicas cercanas (radio ' + radioKm + ' km)…');
 
       fetch(url)
         .then(function (respuesta) { return respuesta.json(); })
@@ -270,6 +286,15 @@
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
+
+    function radioKmLabel() {
+      return (radioSeleccionado / 1000).toFixed(0);
+    }
+
+    selectRadio.addEventListener('change', function () {
+      radioSeleccionado = parseInt(selectRadio.value, 10) || 5000;
+      mostrarMensaje('Radio actualizado a ' + radioKmLabel() + ' km.');
+    });
 
     boton.addEventListener('click', function () {
       solicitarUbicacion();

@@ -203,7 +203,7 @@ def clinicas_reales():
         return jsonify({'error': 'Los parámetros lat y lng son obligatorios.'}), 400
 
     try:
-        radio = float(request.args.get('radio', 10000))
+        radio = float(request.args.get('radio', 5000))
     except ValueError:
         return jsonify({'error': 'El radio debe ser un número en metros.'}), 400
 

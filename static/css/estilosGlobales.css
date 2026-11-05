@@ -1087,6 +1087,29 @@ textarea.in,
   cursor: pointer;
 }
 
+.filtro-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--texto-suave, #6b7280);
+}
+
+.filtro-radio label {
+  margin: 0;
+  font-weight: 600;
+  color: var(--texto, #111827);
+}
+
+.filtro-radio select {
+  padding: 6px 10px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
 #resultados {
   margin-top: 8px;
 }
