@@ -7,12 +7,12 @@
 - Rama activa: `feature/fase4-frontend` (Fase 4 en progreso).
 - MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas.
 - Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado) y mapa (Leaflet + PostGIS).
-- Fase 4 completada (mapa): clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática al cargar, marcador de ubicación del usuario, toggle entre clínicas reales y base local, fallback automático a BD local si Overpass falla.
+- Fase 4 completada (mapa): clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática al cargar, marcador de ubicación del usuario, toggle entre clínicas reales y base local, fallback automático a BD local si Overpass falla, radio de búsqueda configurable (2/5/10/20 km, default 5 km).
 - Frontend mejorado: diseño con SVG icons, dashboard con estadísticas, plantillas reestructuradas.
 
 ## Decisiones (y por qué)
 - Overpass API (OpenStreetMap) sin clave de API; gratis y sin registro.
-- Endpoint `GET /clinicas/reales?lat=&lng=&radio=` consulta `amenity=veterinary` y hace fallback a BD local si Overpass no responde o devuelve 0 elementos.
+- Endpoint `GET /clinicas/reales?lat=&lng=&radio=` consulta `amenity=veterinary` y hace fallback a BD local si Overpass no responde o devuelve 0 elementos. Default de radio: 5000 m.
 - Consulta Overpass via GET con parametro `data` + header User-Agent (formato estandar del API).
 - Múltiples instancias de Overpass con retry: overpass-api.de y overpass.kumi.systems.
 - Timeout de 60s para consultas Overpass.
