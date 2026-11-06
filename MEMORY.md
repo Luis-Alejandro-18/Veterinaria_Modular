@@ -31,5 +31,6 @@
 - `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
 
 ## Próximos pasos
-- Fase 4 completada: mapa con Overpass, registro separado, vista veterinario tipo Uber, chat de seguimiento.
+- Fase 4 completada: mapa con Overpass, registro separado, vista veterinario tipo Uber, chat de seguimiento, navegación condicional por rol.
+- Navegación por rol: navbar condicional en base.html; veterinarios ven Consultas disponibles y Mis consultas (sin Clínicas, Mis mascotas, Triaje); redirección con flash message si intentan acceder a /mascotas/ o /triaje/nueva.
 - Opcional: CI con PostgreSQL/PostGIS.
