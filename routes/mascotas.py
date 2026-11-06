@@ -21,6 +21,14 @@ def _to_float(value):
         return None
 
 
+@mascotas_bp.before_request
+def _redirect_veterinarios():
+    """Redirige a veterinarios de la sección de mascotas (solo para dueños)."""
+    if g.usuario and g.usuario.rol == 'veterinario':
+        flash('Esta sección es solo para dueños de mascotas.', 'error')
+        return redirect(url_for('veterinario.consultas_disponibles'))
+
+
 @mascotas_bp.route('/')
 @login_required
 def lista():

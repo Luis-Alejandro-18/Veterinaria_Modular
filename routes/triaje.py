@@ -31,6 +31,16 @@ PALABRAS_MODERADAS = [
 ]
 
 
+@triaje_bp.before_request
+def _redirect_veterinarios_crear():
+    """Redirige a veterinarios de crear/listar triaje (solo atienden consultas)."""
+    if g.usuario and g.usuario.rol == 'veterinario':
+        endpoint = request.endpoint or ''
+        if endpoint in ('triaje.nueva', 'triaje.lista'):
+            flash('Los veterinarios atienden consultas desde Consultas disponibles.', 'error')
+            return redirect(url_for('veterinario.consultas_disponibles'))
+
+
 def clasificar_urgencia(sintomas):
     """Clasifica la urgencia con reglas simples por palabras clave."""
     texto = sintomas.lower()
