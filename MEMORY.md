@@ -33,5 +33,5 @@
 ## Próximos pasos
 - Fase 4 completada: mapa con Overpass, registro separado, vista veterinario tipo Uber, chat de seguimiento, navegación condicional por rol.
 - Navegación por rol: navbar condicional en base.html; veterinarios ven Consultas disponibles y Mis consultas (sin Clínicas, Mis mascotas, Triaje); redirección con flash message si intentan acceder a /mascotas/ o /triaje/nueva.
-- Triaje guiado completado: síntomas predefinidos en constantes.py organizados por urgencia, checkboxes en form.html con vista previa en tiempo real, clasificación híbrida (predefinidos + texto libre) en routes/triaje.py.
+- Triaje guiado rediseñado: formulario de tres columnas (datos paciente, síntomas por gravedad, estado general Sí/No), indicador de progreso Paso 1 de 3, clasificación de urgencia considera estado general (no consciente, no camina, respiración difícil, heridas abiertas → Urgente).
 - Opcional: CI con PostgreSQL/PostGIS.
