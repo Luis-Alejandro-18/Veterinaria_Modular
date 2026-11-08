@@ -9,7 +9,7 @@ from sqlalchemy import or_
 from werkzeug.utils import secure_filename
 
 from constants import (ESTADOS_CONSULTA, ESTADO_CERRADA, NIVELES_URGENCIA,
-                       TRANSICIONES_ESTADO)
+                       SINTOMAS_PREDEFINIDOS, TRANSICIONES_ESTADO)
 from data.primeros_auxilios import obtener_guia
 from models import Consulta, Evidencia, Mascota, MensajeConsulta, RespuestaOrientacion, db
 from routes.utils import (login_required, puede_ver_consulta,
@@ -41,13 +41,36 @@ def _redirect_veterinarios_crear():
             return redirect(url_for('veterinario.consultas_disponibles'))
 
 
-def clasificar_urgencia(sintomas):
-    """Clasifica la urgencia con reglas simples por palabras clave."""
-    texto = sintomas.lower()
+def clasificar_urgencia(sintomas_texto, sintomas_predefinidos=None):
+    """Clasifica la urgencia con reglas simples por palabras clave y síntomas predefinidos.
+
+    Args:
+        sintomas_texto: Texto libre de síntomas.
+        sintomas_predefinidos: Lista de claves de síntomas predefinidos seleccionados.
+    """
+    texto = (sintomas_texto or '').lower()
+    predefinidos = sintomas_predefinidos or []
+
+    # Si hay algún síntoma predefinido urgente, la urgencia es Urgente.
+    for clave in predefinidos:
+        for nivel, sintomas in SINTOMAS_PREDEFINIDOS.items():
+            if any(s[0] == clave for s in sintomas) and nivel == 'Urgente':
+                return 'Urgente'
+
+    # Palabras clave urgentes en el texto libre.
     if any(palabra in texto for palabra in PALABRAS_URGENTES):
         return 'Urgente'
+
+    # Si hay algún síntoma predefinido moderado, la urgencia es al menos Moderado.
+    for clave in predefinidos:
+        for nivel, sintomas in SINTOMAS_PREDEFINIDOS.items():
+            if any(s[0] == clave for s in sintomas) and nivel == 'Moderado':
+                return 'Moderado'
+
+    # Palabras clave moderadas en el texto libre.
     if any(palabra in texto for palabra in PALABRAS_MODERADAS):
         return 'Moderado'
+
     return 'Leve'
 
 
@@ -101,10 +124,19 @@ def nueva():
 
     if request.method == 'POST':
         mascota_id = request.form.get('mascota_id')
-        sintomas = request.form.get('sintomas', '').strip()
+        sintomas_texto = request.form.get('sintomas', '').strip()
+        sintomas_predefinidos = request.form.getlist('sintomas_predefinidos')
         acepta = request.form.get('acepta_terminos_triage') == 'on'
 
-        if not mascota_id or not sintomas or not acepta:
+        # Combinar síntomas predefinidos con texto libre para el campo de BD.
+        partes_sintomas = []
+        if sintomas_predefinidos:
+            partes_sintomas.append('Síntomas seleccionados: ' + ', '.join(sintomas_predefinidos))
+        if sintomas_texto:
+            partes_sintomas.append(sintomas_texto)
+        sintomas_combinados = ' | '.join(partes_sintomas)
+
+        if not mascota_id or not sintomas_combinados or not acepta:
             flash('Selecciona una mascota, describe los síntomas y acepta los términos.', 'error')
             return redirect(url_for('triaje.nueva'))
 
@@ -115,8 +147,8 @@ def nueva():
 
         consulta = Consulta(
             mascota_id=mascota.id,
-            sintomas=sintomas,
-            nivel_urgencia=clasificar_urgencia(sintomas),
+            sintomas=sintomas_combinados,
+            nivel_urgencia=clasificar_urgencia(sintomas_texto, sintomas_predefinidos),
             estado='Pendiente',
             acepta_terminos_triage=True,
         )
@@ -125,7 +157,8 @@ def nueva():
         flash(f'Consulta creada. Nivel de urgencia: {consulta.nivel_urgencia}.', 'success')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
-    return render_template('triaje/form.html', mascotas=mascotas)
+    return render_template('triaje/form.html', mascotas=mascotas,
+                           sintomas_predefinidos=SINTOMAS_PREDEFINIDOS)
 
 
 @triaje_bp.route('/<int:consulta_id>')

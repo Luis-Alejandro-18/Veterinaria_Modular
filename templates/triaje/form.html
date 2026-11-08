@@ -7,7 +7,7 @@
   <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
   <div>
     <h1>Nuevo triaje</h1>
-    <p>Describe lo que le sucede a tu mascota para orientar la urgencia.</p>
+    <p>Selecciona los síntomas de tu mascota para orientar la urgencia.</p>
   </div>
   <a class="btn ghost" href="{{ url_for('triaje.lista') }}">
     <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
@@ -31,9 +31,32 @@
     </div>
 
     <div class="field">
-      <label for="sintomas">Describe los síntomas <span class="req">*</span></label>
-      <textarea class="in" id="sintomas" name="sintomas" rows="5" required placeholder="Ej: mi perro vomita y tiene fiebre desde ayer..."></textarea>
-      <small class="hint">Cuanto más detalle, mejor será la orientación preliminar.</small>
+      <label for="sintomas-predefinidos">Síntomas <span class="req">*</span></label>
+      <p class="hint">Selecciona todos los que apliquen. Puedes añadir detalles abajo.</p>
+
+      <div class="sintomas-grid">
+        {% for nivel, sintomas in sintomas_predefinidos.items() %}
+        <div class="sintoma-grupo">
+          <h4 class="sintoma-nivel nivel-{{ nivel|lower }}">{{ nivel }}</h4>
+          <div class="sintoma-lista">
+            {% for clave, etiqueta in sintomas %}
+            <label class="sintoma-item">
+              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+              <span class="sintoma-texto">{{ etiqueta }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="field mt-2">
+        <label for="sintomas">Detalles adicionales (opcional)</label>
+        <textarea class="in" id="sintomas" name="sintomas" rows="3" placeholder="Agrega cualquier otro detalle que consideres importante…"></textarea>
+        <small class="hint">Ej: comenzó ayer por la noche, solo come de vez en cuando.</small>
+      </div>
+
+      <p id="urgencia-estimada" class="urgencia-preview"></p>
     </div>
 
     <label class="checkbox">
@@ -60,4 +83,52 @@
   </a>
 </div>
 {% endif %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const checkboxes = document.querySelectorAll('input[name="sintomas_predefinidos"]');
+    const textoArea = document.getElementById('sintomas');
+    const preview = document.getElementById('urgencia-estimada');
+
+    const urgenciaPorNivel = {
+      'urgente': { texto: 'Urgencia estimada: Urgente', clase: 'urgencia-urgente' },
+      'moderado': { texto: 'Urgencia estimada: Moderado', clase: 'urgencia-moderado' },
+      'leve': { texto: 'Urgencia estimada: Leve', clase: 'urgencia-leve' },
+    };
+
+    const sintomasPorNivel = {};
+    {% for nivel, sintomas in sintomas_predefinidos.items() %}
+    sintomasPorNivel['{{ nivel|lower }}'] = {{ sintomas|map(attribute=0)|list|tojson }};
+    {% endfor %}
+
+    function actualizarVistaPrevia() {
+      const seleccionados = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+      const texto = (textoArea.value || '').trim();
+
+      let nivel = 'leve';
+
+      // Urgente tiene prioridad
+      if (sintomasPorNivel.urgente.some(s => seleccionados.includes(s))) {
+        nivel = 'urgente';
+      } else if (texto.match(/sangra|sangrado|convulsion|convulsión|no respira|dificultad para respirar|envenen|atropell|desmay|inconsciente|fractura|vomita sangre|parto/)) {
+        nivel = 'urgente';
+      } else if (sintomasPorNivel.moderado.some(s => seleccionados.includes(s))) {
+        nivel = 'moderado';
+      } else if (texto.match(/vomita|diarrea|fiebre|cojea|dolor|hinchaz|letargo|no come|tos/)) {
+        nivel = 'moderado';
+      } else if (seleccionados.length > 0 || texto.length > 0) {
+        nivel = 'leve';
+      }
+
+      preview.textContent = urgenciaPorNivel[nivel].texto;
+      preview.className = 'urgencia-preview ' + urgenciaPorNivel[nivel].clase;
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', actualizarVistaPrevia));
+    textoArea.addEventListener('input', actualizarVistaPrevia);
+  })();
+</script>
 {% endblock %}

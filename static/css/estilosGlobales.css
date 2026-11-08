@@ -1556,3 +1556,101 @@ textarea.in,
 .chat-form .actions {
   margin: 0;
 }
+
+/* Triaje guiado — síntomas predefinidos */
+.sintomas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.sintoma-grupo {
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.sintoma-nivel {
+  margin: 0 0 10px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sintoma-nivel.nivel-urgente {
+  color: var(--danger, #dc2626);
+}
+
+.sintoma-nivel.nivel-moderado {
+  color: var(--warning, #d97706);
+}
+
+.sintoma-nivel.nivel-leve {
+  color: var(--success, #15803d);
+}
+
+.sintoma-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sintoma-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.sintoma-item input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.sintoma-texto {
+  color: var(--texto, #111827);
+}
+
+.mt-2 {
+  margin-top: 12px !important;
+}
+
+/* Vista previa de urgencia */
+.urgencia-preview {
+  margin-top: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.urgencia-urgente {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.urgencia-moderado {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.urgencia-leve {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+/* Responsive para síntomas */
+@media (max-width: 640px) {
+  .sintomas-grid {
+    grid-template-columns: 1fr;
+  }
+}
