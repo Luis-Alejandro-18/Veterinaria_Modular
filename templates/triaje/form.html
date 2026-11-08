@@ -1,135 +1,226 @@
 {% extends 'base.html' %}
 
-{% block title %}Nuevo triaje — Vet en un Click{% endblock %}
+{% block title %}Triaje Virtual — Vet en un Click{% endblock %}
 
 {% block content %}
 <div class="page-head">
   <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
   <div>
-    <h1>Nuevo triaje</h1>
-    <p>Selecciona los síntomas de tu mascota para orientar la urgencia.</p>
+    <h1>Triaje Virtual de Urgencia</h1>
+    <p>Evalúa un triaje virtual para dueños de mascotas y alertas para un triaje correcto.</p>
   </div>
-  <a class="btn ghost" href="{{ url_for('triaje.lista') }}">
-    <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
-    Volver
-  </a>
+  <div class="progress">
+    <span class="step current">Paso 1 de 3</span>
+    <span class="arrow">→</span>
+    <span class="step">Estado</span>
+    <span class="arrow">→</span>
+    <span class="step">Resumen</span>
+  </div>
 </div>
 
-{% if mascotas %}
-<div class="card">
-  <form method="post" class="form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="triaje-container">
+  {% if mascotas %}
+  <div class="col-paciente">
+    <div class="card card-paciente">
+      <h3>Datos Básicos del Paciente</h3>
+      <form method="post" class="form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div class="field">
-      <label for="mascota_id">Mascota <span class="req">*</span></label>
-      <select class="in" id="mascota_id" name="mascota_id" required>
-        <option value="">Selecciona una mascota</option>
-        {% for mascota in mascotas %}
-          <option value="{{ mascota.id }}">{{ mascota.nombre }} ({{ mascota.especie }})</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="field">
-      <label for="sintomas-predefinidos">Síntomas <span class="req">*</span></label>
-      <p class="hint">Selecciona todos los que apliquen. Puedes añadir detalles abajo.</p>
-
-      <div class="sintomas-grid">
-        {% for nivel, sintomas in sintomas_predefinidos.items() %}
-        <div class="sintoma-grupo">
-          <h4 class="sintoma-nivel nivel-{{ nivel|lower }}">{{ nivel }}</h4>
-          <div class="sintoma-lista">
-            {% for clave, etiqueta in sintomas %}
-            <label class="sintoma-item">
-              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
-              <span class="sintoma-texto">{{ etiqueta }}</span>
-            </label>
+        <div class="field">
+          <label for="mascota_id">Selecciona mascota <span class="req">*</span></label>
+          <select class="in" id="mascota_id" name="mascota_id" required>
+            <option value="">Selecciona una mascota</option>
+            {% for mascota in mascotas %}
+              <option value="{{ mascota.id }}">{{ mascota.nombre }} ({{ mascota.especie }})</option>
             {% endfor %}
-          </div>
+          </select>
         </div>
-        {% endfor %}
+
+        <div class="field">
+          <label for="motivo">Describe el motivo de consulta</label>
+          <textarea class="in" id="motivo" name="motivo" rows="4" placeholder="Ej: vomita repetidamente, letargo, no come desde ayer…"></textarea>
+          <small class="hint">Describe en detalle lo que observas en tu mascota.</small>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary btn-evaluar">
+            <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+            Evaluar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-sintomas">
+    <div class="card card-sintomas">
+      <h3>Categorización de Síntomas por Gravedad</h3>
+
+      <div class="grupo-grupo grupo-urgente">
+        <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Graves / Emergencia (Rojo)</h4>
+        <div class="sintoma-lista">
+          {% for clave, etiqueta in sintomas_predefinidos['Urgente'] %}
+          <label class="sintoma-item">
+            <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+            <span class="sintoma-check"></span>
+            <span class="sintoma-texto">{{ etiqueta }}</span>
+          </label>
+          {% endfor %}
+        </div>
       </div>
 
-      <div class="field mt-2">
-        <label for="sintomas">Detalles adicionales (opcional)</label>
-        <textarea class="in" id="sintomas" name="sintomas" rows="3" placeholder="Agrega cualquier otro detalle que consideres importante…"></textarea>
-        <small class="hint">Ej: comenzó ayer por la noche, solo come de vez en cuando.</small>
+      <div class="grupo-grupo grupo-moderado">
+        <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Moderados / Urgencia</h4>
+        <div class="sintoma-lista">
+          {% for clave, etiqueta in sintomas_predefinidos['Moderado'] %}
+          <label class="sintoma-item">
+            <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+            <span class="sintoma-check"></span>
+            <span class="sintoma-texto">{{ etiqueta }}</span>
+          </label>
+          {% endfor %}
+        </div>
       </div>
 
-      <p id="urgencia-estimada" class="urgencia-preview"></p>
+      <div class="grupo-grupo grupo-leve">
+        <h4><svg class="i" aria-hidden="true"><use href="#check"/></svg> Leves / No Urgentes</h4>
+        <div class="sintoma-lista">
+          {% for clave, etiqueta in sintomas_predefinidos['Leve'] %}
+          <label class="sintoma-item">
+            <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+            <span class="sintoma-check"></span>
+            <span class="sintoma-texto">{{ etiqueta }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
     </div>
+  </div>
 
-    <label class="checkbox">
-      <input type="checkbox" name="acepta_terminos_triage" required>
-      Acepto que esta orientación es un triaje preliminar y no sustituye un diagnóstico veterinario.
-    </label>
+  <div class="col-estado">
+    <div class="card card-estado">
+      <h3>Formulario de Estado General</h3>
 
-    <div class="actions">
-      <a class="btn ghost" href="{{ url_for('triaje.lista') }}">Cancelar</a>
-      <button type="submit" class="btn">
-        <svg class="i" aria-hidden="true"><use href="#send"/></svg>
-        Enviar consulta
-      </button>
+      <div class="field estado-pregunta">
+        <label>¿Está consciente?</label>
+        <div class="opciones-siono">
+          <label class="opcion-siono">
+            <input type="radio" name="estado_consciente" value="si">
+            <span class="check-circle"></span>
+            Sí
+          </label>
+          <label class="opcion-siono">
+            <input type="radio" name="estado_consciente" value="no">
+            <span class="check-circle"></span>
+            No
+          </label>
+        </div>
+      </div>
+
+      <div class="field estado-pregunta">
+        <label>¿Puede caminar?</label>
+        <div class="opciones-siono">
+          <label class="opcion-siono">
+            <input type="radio" name="estado_caminar" value="si">
+            <span class="check-circle"></span>
+            Sí
+          </label>
+          <label class="opcion-siono">
+            <input type="radio" name="estado_caminar" value="no">
+            <span class="check-circle"></span>
+            No
+          </label>
+        </div>
+      </div>
+
+      <div class="field estado-pregunta">
+        <label>¿Cómo es su respiración?</label>
+        <div class="opciones-siono">
+          <label class="opcion-siono">
+            <input type="radio" name="estado_respiracion" value="normal">
+            <span class="check-circle"></span>
+            Normal
+          </label>
+          <label class="opcion-siono">
+            <input type="radio" name="estado_respiracion" value="dificil">
+            <span class="check-circle"></span>
+            Difícil
+          </label>
+        </div>
+      </div>
+
+      <div class="field estado-pregunta">
+        <label>¿Tiene heridas abiertas?</label>
+        <div class="opciones-siono">
+          <label class="opcion-siono">
+            <input type="radio" name="estado_heridas" value="si">
+            <span class="check-circle"></span>
+            Sí
+          </label>
+          <label class="opcion-siono">
+            <input type="radio" name="estado_heridas" value="no">
+            <span class="check-circle"></span>
+            No
+          </label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary btn-final">
+          <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+            Evaluar Gravedad y Contactar Veterinario
+        </button>
+      </div>
     </div>
-  </form>
-</div>
-{% else %}
-<div class="card empty-state">
-  <h2>Primero registra una mascota</h2>
-  <p>Necesitas al menos una mascota para poder iniciar un triaje.</p>
-  <a class="btn" href="{{ url_for('mascotas.nueva') }}">
-    <svg class="i" aria-hidden="true"><use href="#plus"/></svg>
-    Nueva mascota
-  </a>
-</div>
-{% endif %}
+  </div>
+  {% else %}
+  <div class="card empty-state">
+    <h2>Primero registra una mascota</h2>
+    <p>Necesitas al menos una mascota para poder iniciar un triaje.</p>
+    <a class="btn" href="{{ url_for('mascotas.nueva') }}">
+      <svg class="i" aria-hidden="true"><use href="#plus"/></svg>
+      Nueva mascota
+    </a>
+  </div>
+  {% endif %}
+  </div>
+
+  <div class="triaje-footer">
+    <div class="info-box">
+      <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+      <div>
+        <strong>Por favor, responde con calma.</strong>
+        Si es una emergencia vital, te contactaremos con un veterinario de inmediato.
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
   (function () {
     const checkboxes = document.querySelectorAll('input[name="sintomas_predefinidos"]');
-    const textoArea = document.getElementById('sintomas');
-    const preview = document.getElementById('urgencia-estimada');
+    const radios = document.querySelectorAll('input[type="radio"]');
+    const motivo = document.getElementById('motivo');
+    const btnEvaluar = document.querySelector('.btn-evaluar');
+    const btnFinal = document.querySelector('.btn-final');
 
-    const urgenciaPorNivel = {
-      'urgente': { texto: 'Urgencia estimada: Urgente', clase: 'urgencia-urgente' },
-      'moderado': { texto: 'Urgencia estimada: Moderado', clase: 'urgencia-moderado' },
-      'leve': { texto: 'Urgencia estimada: Leve', clase: 'urgencia-leve' },
-    };
+    // Validación: al menos un campo debe estar lleno para habilitar botón
+    function validarFormulario() {
+      const haySintomas = Array.from(checkboxes).some(cb => cb.checked);
+      const hayRadios = Array.from(radios).some(r => r.checked);
+      const hayMotivo = motivo && motivo.value.trim().length > 0;
+      const habilitado = haySintomas || hayRadios || hayMotivo;
 
-    const sintomasPorNivel = {};
-    {% for nivel, sintomas in sintomas_predefinidos.items() %}
-    sintomasPorNivel['{{ nivel|lower }}'] = {{ sintomas|map(attribute=0)|list|tojson }};
-    {% endfor %}
-
-    function actualizarVistaPrevia() {
-      const seleccionados = Array.from(checkboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
-      const texto = (textoArea.value || '').trim();
-
-      let nivel = 'leve';
-
-      // Urgente tiene prioridad
-      if (sintomasPorNivel.urgente.some(s => seleccionados.includes(s))) {
-        nivel = 'urgente';
-      } else if (texto.match(/sangra|sangrado|convulsion|convulsión|no respira|dificultad para respirar|envenen|atropell|desmay|inconsciente|fractura|vomita sangre|parto/)) {
-        nivel = 'urgente';
-      } else if (sintomasPorNivel.moderado.some(s => seleccionados.includes(s))) {
-        nivel = 'moderado';
-      } else if (texto.match(/vomita|diarrea|fiebre|cojea|dolor|hinchaz|letargo|no come|tos/)) {
-        nivel = 'moderado';
-      } else if (seleccionados.length > 0 || texto.length > 0) {
-        nivel = 'leve';
-      }
-
-      preview.textContent = urgenciaPorNivel[nivel].texto;
-      preview.className = 'urgencia-preview ' + urgenciaPorNivel[nivel].clase;
+      if (btnEvaluar) btnEvaluar.disabled = !habilitado;
+      if (btnFinal) btnFinal.disabled = !habilitado;
     }
 
-    checkboxes.forEach(cb => cb.addEventListener('change', actualizarVistaPrevia));
-    textoArea.addEventListener('input', actualizarVistaPrevia);
+    checkboxes.forEach(cb => cb.addEventListener('change', validarFormulario));
+    radios.forEach(r => r.addEventListener('change', validarFormulario));
+    if (motivo) motivo.addEventListener('input', validarFormulario);
+
+    validarFormulario();
   })();
 </script>
 {% endblock %}

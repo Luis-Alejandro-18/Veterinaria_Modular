@@ -41,15 +41,27 @@ def _redirect_veterinarios_crear():
             return redirect(url_for('veterinario.consultas_disponibles'))
 
 
-def clasificar_urgencia(sintomas_texto, sintomas_predefinidos=None):
-    """Clasifica la urgencia con reglas simples por palabras clave y síntomas predefinidos.
+def clasificar_urgencia(sintomas_texto, sintomas_predefinidos=None, estado_general=None):
+    """Clasifica la urgencia con reglas simples por palabras clave, síntomas predefinidos y estado general.
 
     Args:
         sintomas_texto: Texto libre de síntomas.
         sintomas_predefinidos: Lista de claves de síntomas predefinidos seleccionados.
+        estado_general: Dict con respuestas del formulario de estado general.
     """
     texto = (sintomas_texto or '').lower()
     predefinidos = sintomas_predefinidos or []
+    estado = estado_general or {}
+
+    # Respuestas críticas del estado general que forzan Urgente.
+    if estado.get('estado_consciente') == 'no':
+        return 'Urgente'
+    if estado.get('estado_caminar') == 'no':
+        return 'Urgente'
+    if estado.get('estado_respiracion') == 'dificil':
+        return 'Urgente'
+    if estado.get('estado_heridas') == 'si':
+        return 'Urgente'
 
     # Si hay algún síntoma predefinido urgente, la urgencia es Urgente.
     for clave in predefinidos:
@@ -124,16 +136,33 @@ def nueva():
 
     if request.method == 'POST':
         mascota_id = request.form.get('mascota_id')
-        sintomas_texto = request.form.get('sintomas', '').strip()
+        motivo = request.form.get('motivo', '').strip()
         sintomas_predefinidos = request.form.getlist('sintomas_predefinidos')
+        estado_consciente = request.form.get('estado_consciente', '')
+        estado_caminar = request.form.get('estado_caminar', '')
+        estado_respiracion = request.form.get('estado_respiracion', '')
+        estado_heridas = request.form.get('estado_heridas', '')
         acepta = request.form.get('acepta_terminos_triage') == 'on'
 
-        # Combinar síntomas predefinidos con texto libre para el campo de BD.
+        # Construir el texto de síntomas combinando motivo + predefinidos + estado general.
         partes_sintomas = []
+        if motivo:
+            partes_sintomas.append('Motivo: ' + motivo)
         if sintomas_predefinidos:
-            partes_sintomas.append('Síntomas seleccionados: ' + ', '.join(sintomas_predefinidos))
-        if sintomas_texto:
-            partes_sintomas.append(sintomas_texto)
+            partes_sintomas.append('Síntomas: ' + ', '.join(sintomas_predefinidos))
+
+        estado_partes = []
+        if estado_consciente:
+            estado_partes.append(f'Consciente: {estado_consciente}')
+        if estado_caminar:
+            estado_partes.append(f'Camina: {estado_caminar}')
+        if estado_respiracion:
+            estado_partes.append(f'Respiración: {estado_respiracion}')
+        if estado_heridas:
+            estado_partes.append(f'Heridas abiertas: {estado_heridas}')
+        if estado_partes:
+            partes_sintomas.append('Estado general: ' + '; '.join(estado_partes))
+
         sintomas_combinados = ' | '.join(partes_sintomas)
 
         if not mascota_id or not sintomas_combinados or not acepta:
@@ -145,10 +174,17 @@ def nueva():
             flash('No puedes crear una consulta para esa mascota.', 'error')
             return redirect(url_for('triaje.nueva'))
 
+        estado_general = {
+            'estado_consciente': estado_consciente,
+            'estado_caminar': estado_caminar,
+            'estado_respiracion': estado_respiracion,
+            'estado_heridas': estado_heridas,
+        }
+
         consulta = Consulta(
             mascota_id=mascota.id,
             sintomas=sintomas_combinados,
-            nivel_urgencia=clasificar_urgencia(sintomas_texto, sintomas_predefinidos),
+            nivel_urgencia=clasificar_urgencia(motivo, sintomas_predefinidos, estado_general),
             estado='Pendiente',
             acepta_terminos_triage=True,
         )
