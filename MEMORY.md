@@ -1,37 +1,43 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-11-05 (Fase 4 completada)
+> Última actualización: 2026-11-08 (Fase 4 — triaje rediseñado y clasif. corregida)
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
-- Rama activa: `feature/fase4-frontend` (Fase 4 en progreso).
+- Rama activa: `feature/fase4-frontend` (Fase 4 completada).
 - MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas.
-- Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado) y mapa (Leaflet + PostGIS).
-- Fase 4 completada (mapa): clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática al cargar, marcador de ubicación del usuario, toggle entre clínicas reales y base local, fallback automático a BD local si Overpass falla, radio de búsqueda configurable (2/5/10/20 km, default 5 km).
-- Registro separado completado: `/registro` (landing de selección), `/registro/dueno` (sin cédula), `/registro/veterinario` (cédula obligatoria).
+- Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado, chat) y mapa (Leaflet + PostGIS).
+- Mapa completado: clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática, marcador de usuario, toggle real/local, fallback a BD local, radio 2/5/10/20 km (default 5 km).
+- Registro separado completado: `/registro` (landing), `/registro/dueno`, `/registro/veterinario` (cédula obligatoria).
 - Vista veterinario tipo Uber completada: `/veterinario/consultas-disponibles`, tomar consulta, `/veterinario/mis-consultas`.
-- Chat de seguimiento completado: modelo MensajeConsulta, endpoints GET/POST /triaje/<id>/chat, historial y chat rápido en detalle.
-- Frontend mejorado: diseño con SVG icons, dashboard con estadísticas, plantillas reestructuradas.
+- Chat de seguimiento completado: modelo MensajeConsulta, GET/POST /triaje/<id>/chat, historial y chat rápido en detalle.
+
+## Triaje Virtual (estado actual)
+- Formulario rediseñado: tarjeta única de dos columnas (datos del paciente + estado general a la izquierda; síntomas por gravedad a la derecha), sin indicador de "Paso 1 de 3".
+- Botón "Evaluar Gravedad y Contactar Veterinario" funcional: validación en `submit`, siempre habilitado; alerta si no hay síntoma/radio/motivo.
+- Checkbox `acepta_terminos_triage` obligatorio (exigido por el backend y la BD).
+- Clasificación de urgencia corregida: normalización (minúsculas, sin acentos), límites de palabra (evita "tos" dentro de "vómitos"), estado general crítico → Urgente, predefinidos urgentes/moderados/leves, texto combinado (motivo + predefinidos + estado). Matriz de 31 casos: 31/31 correctos.
+- Se guardan etiquetas amigables (no claves) en `Consulta.sintomas`.
 
 ## Decisiones (y por qué)
 - Overpass API (OpenStreetMap) sin clave de API; gratis y sin registro.
 - Endpoint `GET /clinicas/reales?lat=&lng=&radio=` consulta `amenity=veterinary` y hace fallback a BD local si Overpass no responde o devuelve 0 elementos. Default de radio: 5000 m.
-- Consulta Overpass via GET con parametro `data` + header User-Agent (formato estandar del API).
-- Múltiples instancias de Overpass con retry: overpass-api.de y overpass.kumi.systems.
-- Timeout de 60s para consultas Overpass.
-- Distancia haversine calculada en Python para resultados de Overpass (no hay PostGIS en esa respuesta).
-- IDs de clínicas Overpass con prefijo `overpass-{tipo}-{id}` para no colisionar con IDs de BD.
-- `urllib.request` de stdlib para no añadir dependencias (`requests` no está en requirements).
+- Consulta Overpass via GET con parametro `data` + header User-Agent. Múltiples instancias con retry.
+- `urllib.request` de stdlib para no añadir dependencias.
+- `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
 
 ## Aprendizajes y errores a evitar
 - Overpass puede estar lento, no responder o rechazar peticiones sin User-Agent; siempre tener fallback a BD local.
-- Los datos de OpenStreetMap dependen de lo mapeado en cada zona; no garantiza cobertura completa de clínicas reales en el AMG.
-- No añadir claves de API al repo; Overpass no necesita clave, pero si se cambia a Google Places se usaría `.env`.
+- No añadir claves de API al repo.
 - Los tests generales desactivan CSRF; el test dedicado usa `client_csrf`.
-- `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
+- Jinja2: verificar `{% block %}`/`{% endblock %}` balanceados y evitar `{% endif }` con espacio.
 
 ## Próximos pasos
-- Fase 4 completada: mapa con Overpass, registro separado, vista veterinario tipo Uber, chat de seguimiento, navegación condicional por rol.
-- Navegación por rol: navbar condicional en base.html; veterinarios ven Consultas disponibles y Mis consultas (sin Clínicas, Mis mascotas, Triaje); redirección con flash message si intentan acceder a /mascotas/ o /triaje/nueva.
-- Triaje guiado rediseñado: formulario de tres columnas (datos paciente, síntomas por gravedad, estado general Sí/No), indicador de progreso Paso 1 de 3, clasificación de urgencia considera estado general (no consciente, no camina, respiración difícil, heridas abiertas → Urgente).
+- Navegación por rol: navbar condicional en base.html; veterinarios ven Consultas disponibles y Mis consultas (sin Clínicas, Mis mascotas, Triaje).
+- Opcional: historial de estados, cierre con motivo, notificaciones, prioridad manual, calificación, estadísticas.
 - Opcional: CI con PostgreSQL/PostGIS.
+
+## Tests
+- `tests/test_smoke.py`: 13 smoke tests actualizados a rutas `/registro/dueno`, `/registro/veterinario` y campo `motivo`.
+- `tests/test_triaje.py`: nuevo, 31 casos parametrizados de `clasificar_urgencia` + 2 unitarios de mapas.
+- Total: 51 passed, 0 failed.
