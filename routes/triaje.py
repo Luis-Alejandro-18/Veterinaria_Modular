@@ -54,13 +54,15 @@ PALABRAS_URGENTES = [
     r'\bconvuls', r'\bdesmay', r'\binconsciente', r'\bno respira',
     r'\bdificultad para respirar', r'\bdificultad respir', r'\bcuesta respir',
     r'\batropell', r'\baccidente', r'\bfractura', r'\bgolpe fuerte',
-    r'\bquemadura', r'\bparto', r'\bsangre en la heces', r'\bherida\w*',
+    r'\bquemadura', r'\bparto', r'\bsangre en la heces',
+    r'\bherida abierta\b', r'\bherida grave\b', r'\bherida profunda\b',
     r'\bno puede caminar',
 ]
 PALABRAS_MODERADAS = [
     r'\bvomita', r'\bvomit', r'\bdiarrea', r'\bfiebre', r'\bcoje',
     r'\bdolor', r'\bhinch\w*', r'\binflamaci', r'\bletargo', r'\bdecaed',
     r'\bdecai', r'\bno come', r'\bno quiere comer', r'\btos\b',
+    r'\bherida\w*',  # herida genérica (no abierta/grave/profunda)
 ]
 
 
@@ -223,7 +225,7 @@ def nueva():
         consulta = Consulta(
             mascota_id=mascota.id,
             sintomas=sintomas_combinados,
-            nivel_urgencia=clasificar_urgencia(sintomas_combinados, sintomas_predefinidos, estado_general),
+            nivel_urgencia=clasificar_urgencia(motivo, sintomas_predefinidos, estado_general),
             estado='Pendiente',
             acepta_terminos_triage=True,
         )

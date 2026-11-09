@@ -54,6 +54,25 @@ CASOS_CLASIFICACION = [
     # --- Sin acentos / mayúsculas ---
     ('SANGRADO ABUNDANTE', [], {}, 'Urgente'),
     ('NO RESPIRA BIEN', [], {}, 'Urgente'),
+
+    # --- Caso reportado por el usuario: diarrea + tos + no come, estado normal ---
+    ('mi perro empezo a tener problemas como de tos y no come como antes',
+     ['diarrea', 'come_poco', 'picazon', 'cambios_comportamiento'],
+     {'estado_consciente': 'si', 'estado_caminar': 'si',
+      'estado_respiracion': 'normal', 'estado_heridas': 'no'}, 'Moderado'),
+
+    # --- Estado general: heridas abiertas "no" no debe forzar Urgente ---
+    ('', [], {'estado_consciente': 'si', 'estado_caminar': 'si',
+              'estado_respiracion': 'normal', 'estado_heridas': 'no'}, 'Leve'),
+
+    # --- Texto libre: herida abierta/grave/profunda → Urgente ---
+    ('herida abierta en la pata', [], {}, 'Urgente'),
+    ('herida grave en el abdomen', [], {}, 'Urgente'),
+    ('herida profunda', [], {}, 'Urgente'),
+
+    # --- Texto libre: herida genérica → Moderado (no abierta/grave/profunda) ---
+    ('herida en la pata', [], {}, 'Moderado'),
+    ('tiene una herida leve', [], {}, 'Moderado'),
 ]
 
 
