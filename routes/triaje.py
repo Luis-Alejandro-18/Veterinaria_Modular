@@ -14,7 +14,7 @@ from constants import (ESTADOS_CONSULTA, ESTADO_CERRADA, NIVELES_URGENCIA,
                        SINTOMAS_PREDEFINIDOS, TRANSICIONES_ESTADO)
 from data.primeros_auxilios import obtener_guia
 from models import Consulta, Evidencia, Mascota, MensajeConsulta, RespuestaOrientacion, db
-from routes.utils import (login_required, puede_ver_consulta,
+from routes.utils import (componer_respuesta, login_required, puede_ver_consulta,
                           ruta_fisica_evidencia, veterinario_required)
 
 triaje_bp = Blueprint('triaje', __name__, url_prefix='/triaje')
@@ -72,8 +72,8 @@ def _redirect_veterinarios_crear():
     if g.usuario and g.usuario.rol == 'veterinario':
         endpoint = request.endpoint or ''
         if endpoint in ('triaje.nueva', 'triaje.lista'):
-            flash('Los veterinarios atienden consultas desde Consultas disponibles.', 'error')
-            return redirect(url_for('veterinario.consultas_disponibles'))
+            flash('Los veterinarios atienden consultas desde la bandeja de casos.', 'error')
+            return redirect(url_for('veterinario.bandeja'))
 
 
 def _coincide(texto_norm, patrones):
@@ -174,6 +174,14 @@ def nueva():
                 .order_by(Mascota.nombre)
                 .all())
 
+    # Si no hay mascotas registradas, guiar al usuario a crear una primero.
+    if not mascotas:
+        flash('Primero registra a tu mascota para poder iniciar un triaje.', 'info')
+        return redirect(url_for('mascotas.nueva', next='triaje'))
+
+    # mascota_id preseleccionada desde el registro de mascota.
+    preseleccionada = request.args.get('mascota_id', type=int)
+
     if request.method == 'POST':
         mascota_id = request.form.get('mascota_id')
         motivo = request.form.get('motivo', '').strip()
@@ -235,7 +243,8 @@ def nueva():
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
     return render_template('triaje/form.html', mascotas=mascotas,
-                           sintomas_predefinidos=SINTOMAS_PREDEFINIDOS)
+                           sintomas_predefinidos=SINTOMAS_PREDEFINIDOS,
+                           mascota_preseleccionada=preseleccionada)
 
 
 @triaje_bp.route('/<int:consulta_id>')
@@ -245,6 +254,8 @@ def detalle(consulta_id):
     if not puede_ver_consulta(consulta):
         flash('No tienes permiso para ver esta consulta.', 'error')
         return redirect(url_for('triaje.lista'))
+    if g.usuario.rol == 'veterinario':
+        return redirect(url_for('veterinario.caso', consulta_id=consulta.id))
     return render_template(
         'triaje/detalle.html',
         consulta=consulta,
@@ -336,14 +347,17 @@ def responder(consulta_id):
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
     mensaje = request.form.get('mensaje', '').strip()
-    if not mensaje:
+    diagnostico = request.form.get('diagnostico', '').strip()
+    recomendaciones = request.form.get('recomendaciones', '').strip()
+    texto = componer_respuesta(diagnostico, recomendaciones, mensaje)
+    if not texto:
         flash('Escribe una respuesta antes de enviarla.', 'error')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
     respuesta = RespuestaOrientacion(
         consulta_id=consulta.id,
         veterinario_id=g.usuario.id,
-        mensaje=mensaje,
+        mensaje=texto,
     )
     if consulta.veterinario_id is None:
         consulta.veterinario_id = g.usuario.id
@@ -380,6 +394,8 @@ def chat_historial(consulta_id):
     if not puede_ver_consulta(consulta):
         flash('No tienes permiso para ver esta consulta.', 'error')
         return redirect(url_for('triaje.lista'))
+    if g.usuario.rol == 'veterinario':
+        return redirect(url_for('veterinario.chat', consulta_id=consulta.id))
     mensajes = (MensajeConsulta.query
                 .filter_by(consulta_id=consulta.id)
                 .order_by(MensajeConsulta.fecha_envio.asc())
@@ -412,4 +428,6 @@ def chat_enviar(consulta_id):
     db.session.add(nuevo_mensaje)
     db.session.commit()
     flash('Mensaje enviado.', 'success')
+    if g.usuario.rol == 'veterinario':
+        return redirect(url_for('veterinario.chat', consulta_id=consulta.id))
     return redirect(url_for('triaje.detalle', consulta_id=consulta.id))

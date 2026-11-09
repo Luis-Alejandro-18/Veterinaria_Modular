@@ -6,8 +6,8 @@ from geoalchemy2.elements import WKTElement
 
 from app import app
 from data.primeros_auxilios import obtener_guia
-from models import (Clinica, Consulta, Evidencia, Mascota, RespuestaOrientacion,
-                    Usuario, db)
+from models import (Clinica, Consulta, Evidencia, Mascota, MensajeConsulta,
+                    RespuestaOrientacion, Usuario, db)
 
 
 def _registrar(client, email, nombre='Usuario Test', rol='dueno', cedula=None):
@@ -35,6 +35,14 @@ def _crear_mascota(client, nombre='Firulais', especie='Perro'):
         '/mascotas/nueva',
         data={'nombre': nombre, 'especie': especie},
         follow_redirects=True,
+    )
+
+
+def _crear_mascota_con_next(client, nombre='Firulais', especie='Perro', next_url='triaje'):
+    return client.post(
+        '/mascotas/nueva',
+        data={'nombre': nombre, 'especie': especie, 'next': next_url},
+        follow_redirects=False,
     )
 
 
@@ -423,3 +431,264 @@ def test_filtros_y_paginacion_triaje(client):
     ).get_data(as_text=True)
     assert 'consulta numero 03' in html
     assert 'consulta numero 04' not in html
+
+def test_login_veterinario_redirige_al_panel(client):
+    _registrar(
+        client,
+        'vet-panel@test.local',
+        nombre='Dra. Panel',
+        rol='veterinario',
+        cedula='VET-PANEL',
+    )
+
+    html = client.post(
+        '/login',
+        data={
+            'email': 'vet-panel@test.local',
+            'password': 'secreto123',
+            'perfil': 'veterinario',
+            'mantener_sesion': 'on',
+        },
+        follow_redirects=True,
+    ).get_data(as_text=True)
+
+    assert 'Bandeja de casos' in html
+    assert 'Dra. Panel' in html
+    assert 'Agenda de seguimiento' in html
+
+
+def test_login_veterinario_rechaza_dueno(client):
+    _registrar(client, 'dueno-login-vet@test.local', nombre='Dueño Login')
+
+    html = client.post(
+        '/login',
+        data={
+            'email': 'dueno-login-vet@test.local',
+            'password': 'secreto123',
+            'perfil': 'veterinario',
+        },
+        follow_redirects=True,
+    ).get_data(as_text=True)
+
+    assert 'exclusivo para veterinarios' in html
+    assert 'Iniciar sesión' in html
+
+
+def test_dueno_no_accede_al_panel_veterinario(client):
+    _registrar(client, 'dueno-sin-panel@test.local', nombre='Dueño Sin Panel')
+    _login(client, 'dueno-sin-panel@test.local')
+
+    html = client.get('/veterinario/bandeja', follow_redirects=True).get_data(as_text=True)
+    assert 'Solo los veterinarios pueden realizar esta acción.' in html
+
+
+def test_flujo_completo_del_panel_veterinario(client):
+    _registrar(client, 'dueno-panel@test.local', nombre='Dueño Panel')
+    _login(client, 'dueno-panel@test.local')
+    _crear_mascota(client, 'Nube', 'Gato')
+    mascota_id = _id_mascota('dueno-panel@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Vomita y no come')
+
+    client.post(
+        f'/triaje/{consulta_id}/chat',
+        data={'mensaje': 'Hola, sigue vomitando.'},
+        follow_redirects=True,
+    )
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-flujo@test.local',
+        nombre='Dra. Flujo',
+        rol='veterinario',
+        cedula='VET-FLUJO',
+    )
+    _login(client, 'vet-flujo@test.local')
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert 'Bandeja de casos' in bandeja
+    assert 'Nube' in bandeja
+    assert 'Tomar caso' in bandeja
+
+    caso_html = client.post(
+        f'/veterinario/casos/{consulta_id}/tomar',
+        follow_redirects=True,
+    ).get_data(as_text=True)
+    assert 'Caso #' in caso_html
+    assert 'Diagnóstico y respuesta' in caso_html
+    assert 'Dra. Flujo' in caso_html
+
+    assert 'Nube' in client.get('/veterinario/tablero').get_data(as_text=True)
+    assert 'Nube' in client.get('/veterinario/agenda').get_data(as_text=True)
+
+    mensajes = client.get('/veterinario/mensajes').get_data(as_text=True)
+    assert 'Hola, sigue vomitando.' in mensajes
+
+    conversacion = client.get(
+        f'/veterinario/mensajes?consulta_id={consulta_id}'
+    ).get_data(as_text=True)
+    assert 'Hola, sigue vomitando.' in conversacion
+
+    with app.app_context():
+        mensaje = MensajeConsulta.query.filter_by(consulta_id=consulta_id).first()
+        assert mensaje.leido is True
+
+    client.post(
+        f'/veterinario/casos/{consulta_id}/chat',
+        data={'mensaje': 'Gracias, revisa si bebe agua.', 'volver': 'chat'},
+        follow_redirects=True,
+    )
+
+    with app.app_context():
+        assert MensajeConsulta.query.filter_by(consulta_id=consulta_id).count() == 2
+
+    html = client.post(
+        f'/veterinario/casos/{consulta_id}/respuesta',
+        data={
+            'diagnostico': 'Cuadro compatible con gastroenteritis.',
+            'recomendaciones': 'Mantén hidratación y vigila señales de alarma.',
+            'requiere_presencial': 'on',
+        },
+        follow_redirects=True,
+    ).get_data(as_text=True)
+
+    assert 'Diagnóstico enviado al dueño.' in html
+    assert 'Cuadro compatible con gastroenteritis.' in html
+
+    with app.app_context():
+        consulta = db.session.get(Consulta, consulta_id)
+        assert consulta.estado == 'Requiere Presencial'
+        respuesta = RespuestaOrientacion.query.filter_by(consulta_id=consulta_id).one()
+        assert 'Diagnóstico:' in respuesta.mensaje
+        assert 'Recomendaciones:' in respuesta.mensaje
+
+    client.post('/logout')
+    _login(client, 'dueno-panel@test.local')
+    detalle = client.get(f'/triaje/{consulta_id}').get_data(as_text=True)
+    assert 'Cuadro compatible con gastroenteritis.' in detalle
+    assert 'Mantén hidratación' in detalle
+    assert 'Requiere Presencial' in detalle
+
+
+def test_otro_veterinario_no_puede_responder_caso_asignado(client):
+    _registrar(client, 'dueno-asignado@test.local', nombre='Dueño Asignado')
+    _login(client, 'dueno-asignado@test.local')
+    _crear_mascota(client, 'Toby', 'Perro')
+    mascota_id = _id_mascota('dueno-asignado@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Cojea de la pata')
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-asignado@test.local',
+        nombre='Vet Asignado',
+        rol='veterinario',
+        cedula='VET-A',
+    )
+    _login(client, 'vet-asignado@test.local')
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    with app.app_context():
+        vet_asignado = Usuario.query.filter_by(email='vet-asignado@test.local').first()
+        vet_id = vet_asignado.id
+
+    client.post('/logout')
+    _registrar(
+        client,
+        'vet-otro@test.local',
+        nombre='Vet Otro',
+        rol='veterinario',
+        cedula='VET-B',
+    )
+    _login(client, 'vet-otro@test.local')
+
+    html = client.post(
+        f'/veterinario/casos/{consulta_id}/respuesta',
+        data={'diagnostico': 'No debería guardarse.'},
+        follow_redirects=True,
+    ).get_data(as_text=True)
+
+    assert 'asignado a otro veterinario' in html
+
+    with app.app_context():
+        assert RespuestaOrientacion.query.filter_by(consulta_id=consulta_id).count() == 0
+        consulta = db.session.get(Consulta, consulta_id)
+        assert consulta.veterinario_id == vet_id
+
+
+def test_login_veterinario_requiere_csrf(client_csrf):
+    html = client_csrf.get('/login?perfil=veterinario').get_data(as_text=True)
+    assert 'name="csrf_token"' in html
+
+    respuesta = client_csrf.post(
+        '/login',
+        data={
+            'email': 'nadie@test.local',
+            'password': 'x',
+            'perfil': 'veterinario',
+        },
+    )
+    assert respuesta.status_code == 400
+
+
+def test_triaje_sin_mascotas_redirige_a_registro(client):
+    _registrar(client, 'sin-mascotas@test.local', nombre='Sin Mascotas')
+    _login(client, 'sin-mascotas@test.local')
+
+    respuesta = client.get('/triaje/nueva', follow_redirects=False)
+    assert respuesta.status_code == 302
+    assert '/mascotas/nueva?next=triaje' in respuesta.headers['Location']
+
+
+def test_crear_mascota_con_next_vuelve_al_triaje_con_preseleccion(client):
+    _registrar(client, 'con-next@test.local', nombre='Con Next')
+    _login(client, 'con-next@test.local')
+
+    respuesta = _crear_mascota_con_next(client, 'Luna', 'Gato', 'triaje')
+    assert '/triaje/nueva?mascota_id=' in respuesta.headers['Location']
+
+    mascota_id = _id_mascota('con-next@test.local')
+    assert f'/triaje/nueva?mascota_id={mascota_id}' in respuesta.headers['Location']
+
+    html = client.get(f'/triaje/nueva?mascota_id={mascota_id}').get_data(as_text=True)
+    assert f'value="{mascota_id}" selected' in html or f'value="{mascota_id}"\n              selected' in html
+
+
+def test_flujo_sin_mascotas_registro_y_triaje_completo(client):
+    _registrar(client, 'flujo-completo@test.local', nombre='Flujo Completo')
+    _login(client, 'flujo-completo@test.local')
+
+    # 1. Intenta hacer triaje sin mascotas → redirige a registrar mascota.
+    respuesta = client.get('/triaje/nueva', follow_redirects=False)
+    assert '/mascotas/nueva?next=triaje' in respuesta.headers['Location']
+
+    # 2. Registra la mascota con next=triaje → vuelve al triaje preseleccionada.
+    respuesta = _crear_mascota_con_next(client, 'Nube', 'Gato', 'triaje')
+    mascota_id = _id_mascota('flujo-completo@test.local')
+    assert f'/triaje/nueva?mascota_id={mascota_id}' in respuesta.headers['Location']
+
+    # 3. Crea la consulta desde el triaje con la mascota ya seleccionada.
+    _crear_consulta(client, mascota_id, 'Tos y no come')
+
+    with app.app_context():
+        consulta = (Consulta.query
+                    .filter_by(mascota_id=mascota_id)
+                    .order_by(Consulta.id.desc())
+                    .first())
+        assert consulta is not None
+        assert consulta.nivel_urgencia == 'Moderado'
+
+
+def test_next_invalido_no_redirige_fuera_del_sitio(client):
+    _registrar(client, 'next-invalido@test.local', nombre='Next Invalido')
+    _login(client, 'next-invalido@test.local')
+
+    respuesta = client.get(
+        '/mascotas/nueva',
+        query_string={'next': 'https://sitio-malicioso.com/robar-datos'},
+        follow_redirects=True,
+    ).get_data(as_text=True)
+
+    # Nunca redirige fuera del sitio; va a mascotas/nueva sin next o al listado.
+    assert 'sitio-malicioso.com' not in respuesta
+    assert 'Registro exitoso' not in respuesta

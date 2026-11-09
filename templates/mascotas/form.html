@@ -20,6 +20,16 @@
 <div class="card">
   <form method="post" class="form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
+
+    {% if mostrar_aviso_triaje %}
+    <div class="flash flash-info" style="margin-bottom: 16px;">
+      <strong>Registra tu mascota para continuar con el triaje.</strong>
+      Una vez creada, volverás al formulario de triaje con ella ya seleccionada.
+    </div>
+    {% endif %}
 
     <div class="cols">
       <div class="col">
