@@ -1563,26 +1563,23 @@ textarea.in,
   grid-template-columns: 1fr 2fr 1fr !important;
   gap: 24px !important;
   margin-top: 16px !important;
+  width: 100% !important;
 }
 
 .col-paciente,
 .col-sintomas,
 .col-estado {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
 }
 
 .card-paciente,
 .card-sintomas,
 .card-estado {
-  height: fit-content;
-  min-width: 0;
-}
-
-/* Asegurar que las tarjetas no se encogan en grid */
-.card {
-  min-width: 0;
+  height: fit-content !important;
+  min-width: 0 !important;
+  width: 100% !important;
 }
 
 /* Forzar que las columnas no se apilen en pantallas muy estrechas */
