@@ -14,9 +14,10 @@
 
 ## Triaje Virtual (estado actual)
 - Formulario rediseñado: tarjeta única de dos columnas (datos del paciente + estado general a la izquierda; síntomas por gravedad a la derecha), sin indicador de "Paso 1 de 3".
+- Flujo para usuarios nuevos: si no hay mascotas registradas, `/triaje/nueva` redirige a `/mascotas/nueva?next=triaje`; tras crear la mascota, vuelve al triaje con la mascota preseleccionada (`?mascota_id=<id>`). El parámetro `next` solo acepta `'triaje'` (evita open redirect).
 - Botón "Evaluar Gravedad y Contactar Veterinario" funcional: validación en `submit`, siempre habilitado; alerta si no hay síntoma/radio/motivo.
 - Checkbox `acepta_terminos_triage` obligatorio (exigido por el backend y la BD).
-- Clasificación de urgencia corregida: normalización (minúsculas, sin acentos), límites de palabra (evita "tos" dentro de "vómitos"), estado general crítico → Urgente, predefinidos urgentes/moderados/leves, **clasifica solo el `motivo` como texto libre** (no el texto combinado) para evitar falsos positivos como "Heridas abiertas: no", regla de herida refinada ("herida abierta/grave/profunda" = Urgente, "herida" genérica = Moderado). Matriz de 38 casos: 38/38 correctos.
+- Clasificación de urgencia corregida: normalización (minúsculas, sin acentos), límites de palabra (evita "tos" dentro de "vómitos"), estado general crítico → Urgente, predefinidos urgentes/moderados/leves, clasifica solo el `motivo` como texto libre (no el texto combinado) para evitar falsos positivos como "Heridas abiertas: no", regla de herida refinada ("herida abierta/grave/profunda" = Urgente, "herida" genérica = Moderado). Matriz de 38 casos: 38/38 correctos.
 - Se guardan etiquetas amigables (no claves) en `Consulta.sintomas`.
 
 ## Decisiones (y por qué)
@@ -38,6 +39,6 @@
 - Opcional: CI con PostgreSQL/PostGIS.
 
 ## Tests
-- `tests/test_smoke.py`: 13 smoke tests actualizados a rutas `/registro/dueno`, `/registro/veterinario` y campo `motivo`.
+- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas (redirección, next=triaje, preselección, flujo completo, next inválido).
 - `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
-- Total: 58 passed, 0 failed.
+- Total: 68 passed, 0 failed.
