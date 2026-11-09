@@ -20,11 +20,12 @@
 
 <div class="triaje-container">
   {% if mascotas %}
-  <div class="col-paciente">
-    <div class="card card-paciente">
-      <h3>Datos Básicos del Paciente</h3>
-      <form method="post" class="form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="col-paciente">
+      <div class="card card-paciente">
+        <h3>Datos Básicos del Paciente</h3>
 
         <div class="field">
           <label for="mascota_id">Selecciona mascota <span class="req">*</span></label>
@@ -41,138 +42,131 @@
           <textarea class="in" id="motivo" name="motivo" rows="4" placeholder="Ej: vomita repetidamente, letargo, no come desde ayer…"></textarea>
           <small class="hint">Describe en detalle lo que observas en tu mascota.</small>
         </div>
+      </div>
+    </div>
+
+    <div class="col-sintomas">
+      <div class="card card-sintomas">
+        <h3>Categorización de Síntomas por Gravedad</h3>
+
+        <div class="grupo-grupo grupo-urgente">
+          <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Graves / Emergencia (Rojo)</h4>
+          <div class="sintoma-lista">
+            {% for clave, etiqueta in sintomas_predefinidos['Urgente'] %}
+            <label class="sintoma-item">
+              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+              <span class="sintoma-check"></span>
+              <span class="sintoma-texto">{{ etiqueta }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="grupo-grupo grupo-moderado">
+          <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Moderados / Urgencia</h4>
+          <div class="sintoma-lista">
+            {% for clave, etiqueta in sintomas_predefinidos['Moderado'] %}
+            <label class="sintoma-item">
+              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+              <span class="sintoma-check"></span>
+              <span class="sintoma-texto">{{ etiqueta }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="grupo-grupo grupo-leve">
+          <h4><svg class="i" aria-hidden="true"><use href="#check"/></svg> Leves / No Urgentes</h4>
+          <div class="sintoma-lista">
+            {% for clave, etiqueta in sintomas_predefinidos['Leve'] %}
+            <label class="sintoma-item">
+              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+              <span class="sintoma-check"></span>
+              <span class="sintoma-texto">{{ etiqueta }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-estado">
+      <div class="card card-estado">
+        <h3>Formulario de Estado General</h3>
+
+        <div class="field estado-pregunta">
+          <label>¿Está consciente?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_consciente" value="si">
+              <span class="check-circle"></span>
+              Sí
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_consciente" value="no">
+              <span class="check-circle"></span>
+              No
+            </label>
+          </div>
+        </div>
+
+        <div class="field estado-pregunta">
+          <label>¿Puede caminar?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_caminar" value="si">
+              <span class="check-circle"></span>
+              Sí
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_caminar" value="no">
+              <span class="check-circle"></span>
+              No
+            </label>
+          </div>
+        </div>
+
+        <div class="field estado-pregunta">
+          <label>¿Cómo es su respiración?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_respiracion" value="normal">
+              <span class="check-circle"></span>
+              Normal
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_respiracion" value="dificil">
+              <span class="check-circle"></span>
+              Difícil
+            </label>
+          </div>
+        </div>
+
+        <div class="field estado-pregunta">
+          <label>¿Tiene heridas abiertas?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_heridas" value="si">
+              <span class="check-circle"></span>
+              Sí
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_heridas" value="no">
+              <span class="check-circle"></span>
+              No
+            </label>
+          </div>
+        </div>
 
         <div class="actions">
-          <button type="submit" class="btn btn-primary btn-evaluar">
+          <button type="submit" class="btn btn-primary btn-final">
             <svg class="i" aria-hidden="true"><use href="#send"/></svg>
-            Evaluar
+            Evaluar Gravedad y Contactar Veterinario
           </button>
         </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="col-sintomas">
-    <div class="card card-sintomas">
-      <h3>Categorización de Síntomas por Gravedad</h3>
-
-      <div class="grupo-grupo grupo-urgente">
-        <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Graves / Emergencia (Rojo)</h4>
-        <div class="sintoma-lista">
-          {% for clave, etiqueta in sintomas_predefinidos['Urgente'] %}
-          <label class="sintoma-item">
-            <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
-            <span class="sintoma-check"></span>
-            <span class="sintoma-texto">{{ etiqueta }}</span>
-          </label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="grupo-grupo grupo-moderado">
-        <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Moderados / Urgencia</h4>
-        <div class="sintoma-lista">
-          {% for clave, etiqueta in sintomas_predefinidos['Moderado'] %}
-          <label class="sintoma-item">
-            <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
-            <span class="sintoma-check"></span>
-            <span class="sintoma-texto">{{ etiqueta }}</span>
-          </label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="grupo-grupo grupo-leve">
-        <h4><svg class="i" aria-hidden="true"><use href="#check"/></svg> Leves / No Urgentes</h4>
-        <div class="sintoma-lista">
-          {% for clave, etiqueta in sintomas_predefinidos['Leve'] %}
-          <label class="sintoma-item">
-            <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
-            <span class="sintoma-check"></span>
-            <span class="sintoma-texto">{{ etiqueta }}</span>
-          </label>
-          {% endfor %}
-        </div>
       </div>
     </div>
-  </div>
-
-  <div class="col-estado">
-    <div class="card card-estado">
-      <h3>Formulario de Estado General</h3>
-
-      <div class="field estado-pregunta">
-        <label>¿Está consciente?</label>
-        <div class="opciones-siono">
-          <label class="opcion-siono">
-            <input type="radio" name="estado_consciente" value="si">
-            <span class="check-circle"></span>
-            Sí
-          </label>
-          <label class="opcion-siono">
-            <input type="radio" name="estado_consciente" value="no">
-            <span class="check-circle"></span>
-            No
-          </label>
-        </div>
-      </div>
-
-      <div class="field estado-pregunta">
-        <label>¿Puede caminar?</label>
-        <div class="opciones-siono">
-          <label class="opcion-siono">
-            <input type="radio" name="estado_caminar" value="si">
-            <span class="check-circle"></span>
-            Sí
-          </label>
-          <label class="opcion-siono">
-            <input type="radio" name="estado_caminar" value="no">
-            <span class="check-circle"></span>
-            No
-          </label>
-        </div>
-      </div>
-
-      <div class="field estado-pregunta">
-        <label>¿Cómo es su respiración?</label>
-        <div class="opciones-siono">
-          <label class="opcion-siono">
-            <input type="radio" name="estado_respiracion" value="normal">
-            <span class="check-circle"></span>
-            Normal
-          </label>
-          <label class="opcion-siono">
-            <input type="radio" name="estado_respiracion" value="dificil">
-            <span class="check-circle"></span>
-            Difícil
-          </label>
-        </div>
-      </div>
-
-      <div class="field estado-pregunta">
-        <label>¿Tiene heridas abiertas?</label>
-        <div class="opciones-siono">
-          <label class="opcion-siono">
-            <input type="radio" name="estado_heridas" value="si">
-            <span class="check-circle"></span>
-            Sí
-          </label>
-          <label class="opcion-siono">
-            <input type="radio" name="estado_heridas" value="no">
-            <span class="check-circle"></span>
-            No
-          </label>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button type="submit" class="btn btn-primary btn-final">
-          <svg class="i" aria-hidden="true"><use href="#send"/></svg>
-            Evaluar Gravedad y Contactar Veterinario
-        </button>
-      </div>
-    </div>
-  </div>
+  </form>
   {% else %}
   <div class="card empty-state">
     <h2>Primero registra una mascota</h2>
@@ -202,7 +196,6 @@
     const checkboxes = document.querySelectorAll('input[name="sintomas_predefinidos"]');
     const radios = document.querySelectorAll('input[type="radio"]');
     const motivo = document.getElementById('motivo');
-    const btnEvaluar = document.querySelector('.btn-evaluar');
     const btnFinal = document.querySelector('.btn-final');
 
     // Validación: al menos un campo debe estar lleno para habilitar botón
@@ -212,7 +205,6 @@
       const hayMotivo = motivo && motivo.value.trim().length > 0;
       const habilitado = haySintomas || hayRadios || hayMotivo;
 
-      if (btnEvaluar) btnEvaluar.disabled = !habilitado;
       if (btnFinal) btnFinal.disabled = !habilitado;
     }
 
