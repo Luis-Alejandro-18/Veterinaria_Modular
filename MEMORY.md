@@ -16,7 +16,7 @@
 - Formulario rediseñado: tarjeta única de dos columnas (datos del paciente + estado general a la izquierda; síntomas por gravedad a la derecha), sin indicador de "Paso 1 de 3".
 - Botón "Evaluar Gravedad y Contactar Veterinario" funcional: validación en `submit`, siempre habilitado; alerta si no hay síntoma/radio/motivo.
 - Checkbox `acepta_terminos_triage` obligatorio (exigido por el backend y la BD).
-- Clasificación de urgencia corregida: normalización (minúsculas, sin acentos), límites de palabra (evita "tos" dentro de "vómitos"), estado general crítico → Urgente, predefinidos urgentes/moderados/leves, texto combinado (motivo + predefinidos + estado). Matriz de 31 casos: 31/31 correctos.
+- Clasificación de urgencia corregida: normalización (minúsculas, sin acentos), límites de palabra (evita "tos" dentro de "vómitos"), estado general crítico → Urgente, predefinidos urgentes/moderados/leves, **clasifica solo el `motivo` como texto libre** (no el texto combinado) para evitar falsos positivos como "Heridas abiertas: no", regla de herida refinada ("herida abierta/grave/profunda" = Urgente, "herida" genérica = Moderado). Matriz de 38 casos: 38/38 correctos.
 - Se guardan etiquetas amigables (no claves) en `Consulta.sintomas`.
 
 ## Decisiones (y por qué)
@@ -39,5 +39,5 @@
 
 ## Tests
 - `tests/test_smoke.py`: 13 smoke tests actualizados a rutas `/registro/dueno`, `/registro/veterinario` y campo `motivo`.
-- `tests/test_triaje.py`: nuevo, 31 casos parametrizados de `clasificar_urgencia` + 2 unitarios de mapas.
-- Total: 51 passed, 0 failed.
+- `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
+- Total: 58 passed, 0 failed.
