@@ -1559,10 +1559,10 @@ textarea.in,
 
 /* ===== Triaje Virtual — Diseño de tres columnas ===== */
 .triaje-container {
-  display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  gap: 24px;
-  margin-top: 16px;
+  display: grid !important;
+  grid-template-columns: 1fr 2fr 1fr !important;
+  gap: 24px !important;
+  margin-top: 16px !important;
 }
 
 .col-paciente,
@@ -1583,6 +1583,13 @@ textarea.in,
 /* Asegurar que las tarjetas no se encogan en grid */
 .card {
   min-width: 0;
+}
+
+/* Forzar que las columnas no se apilen en pantallas muy estrechas */
+@media (max-width: 768px) {
+  .triaje-container {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* Progreso */
