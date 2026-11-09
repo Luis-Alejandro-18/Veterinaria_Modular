@@ -1570,12 +1570,19 @@ textarea.in,
 .col-estado {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .card-paciente,
 .card-sintomas,
 .card-estado {
   height: fit-content;
+  min-width: 0;
+}
+
+/* Asegurar que las tarjetas no se encogan en grid */
+.card {
+  min-width: 0;
 }
 
 /* Progreso */

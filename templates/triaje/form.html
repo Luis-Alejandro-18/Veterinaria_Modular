@@ -20,7 +20,7 @@
 
 <div class="triaje-container">
   {% if mascotas %}
-  <form method="post" class="form">
+  <form method="post" action="{{ url_for('triaje.nueva') }}" class="form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="col-paciente">
@@ -193,26 +193,30 @@
 {% block scripts %}
 <script>
   (function () {
-    const checkboxes = document.querySelectorAll('input[name="sintomas_predefinidos"]');
-    const radios = document.querySelectorAll('input[type="radio"]');
-    const motivo = document.getElementById('motivo');
-    const btnFinal = document.querySelector('.btn-final');
+    var btnFinal = document.querySelector('.btn-final');
+    var form = document.querySelector('form');
 
-    // Validación: al menos un campo debe estar lleno para habilitar botón
-    function validarFormulario() {
-      const haySintomas = Array.from(checkboxes).some(cb => cb.checked);
-      const hayRadios = Array.from(radios).some(r => r.checked);
-      const hayMotivo = motivo && motivo.value.trim().length > 0;
-      const habilitado = haySintomas || hayRadios || hayMotivo;
+    if (!btnFinal || !form) return;
 
-      if (btnFinal) btnFinal.disabled = !habilitado;
-    }
+    // Habilitar el botón siempre que el formulario exista
+    btnFinal.disabled = false;
 
-    checkboxes.forEach(cb => cb.addEventListener('change', validarFormulario));
-    radios.forEach(r => r.addEventListener('change', validarFormulario));
-    if (motivo) motivo.addEventListener('input', validarFormulario);
+    // Validación al enviar: mostrar alerta si no hay nada seleccionado
+    form.addEventListener('submit', function (e) {
+      var checkboxes = document.querySelectorAll('input[name="sintomas_predefinidos"]');
+      var radios = document.querySelectorAll('input[type="radio"]');
+      var motivo = document.getElementById('motivo');
 
-    validarFormulario();
+      var haySintomas = Array.prototype.some.call(checkboxes, function (cb) { return cb.checked; });
+      var hayRadios = Array.prototype.some.call(radios, function (r) { return r.checked; });
+      var hayMotivo = motivo && motivo.value.trim().length > 0;
+
+      if (!haySintomas && !hayRadios && !hayMotivo) {
+        e.preventDefault();
+        alert('Por favor, selecciona al menos un síntoma, responde una pregunta o escribe un motivo antes de continuar.');
+        btnFinal.disabled = false;
+      }
+    });
   })();
 </script>
 {% endblock %}
