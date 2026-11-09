@@ -1557,157 +1557,159 @@ textarea.in,
   margin: 0;
 }
 
-/* ===== Triaje Virtual — Diseño de tres columnas ===== */
-.triaje-container {
-  display: grid !important;
-  grid-template-columns: 1fr 2fr 1fr !important;
-  gap: 24px !important;
-  margin-top: 16px !important;
-  width: 100% !important;
+/* ===== Triaje Virtual — Diseño de tarjetas verticales ===== */
+.triaje-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-.col-paciente,
-.col-sintomas,
-.col-estado {
-  display: flex !important;
-  flex-direction: column !important;
-  min-width: 0 !important;
+.triaje-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.card-paciente,
-.card-sintomas,
-.card-estado {
-  height: fit-content !important;
-  min-width: 0 !important;
-  width: 100% !important;
+.triaje-card {
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
 }
 
-/* Forzar que las columnas no se apilen en pantallas muy estrechas */
-@media (max-width: 768px) {
-  .triaje-container {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-/* Progreso */
-.progress {
+.triaje-card .card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 12px 0;
-  font-size: 0.9rem;
-  color: var(--texto-suave, #6b7280);
+  padding: 14px 18px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line, #e5e7eb);
 }
 
-.progress .step {
-  font-weight: 600;
-}
-
-.progress .step.current {
+.triaje-card .card-header .i {
+  width: 18px;
+  height: 18px;
   color: var(--primary, #5a3cc2);
 }
 
-.progress .arrow {
-  font-size: 0.8rem;
-  color: #cbd5e1;
+.triaje-card .card-header span {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--texto, #111827);
 }
 
-/* Grupos de síntomas */
-.grupo-grupo {
+.triaje-card .card-body {
+  padding: 16px 18px;
+}
+
+.grupo-sintomas {
   border: 1px solid var(--line, #e5e7eb);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 10px;
   margin-bottom: 14px;
-  background: #fff;
+  overflow: hidden;
 }
 
 .grupo-urgente {
   border-left: 4px solid var(--danger, #dc2626);
-  background: #fef2f2;
 }
 
 .grupo-moderado {
   border-left: 4px solid var(--warning, #d97706);
-  background: #fffbeb;
 }
 
 .grupo-leve {
   border-left: 4px solid var(--success, #15803d);
-  background: #f0fdf4;
 }
 
-.grupo-grupo h4 {
-  margin: 0 0 10px 0;
-  font-size: 0.95rem;
-  font-weight: 700;
+.grupo-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line, #e5e7eb);
 }
 
-.grupo-urgente h4 {
-  color: #991b1b;
-}
-
-.grupo-moderado h4 {
-  color: #92400e;
-}
-
-.grupo-leve h4 {
-  color: #166534;
-}
-
-.grupo-grupo .i {
+.grupo-header .i {
   width: 16px;
   height: 16px;
 }
 
-.sintoma-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.grupo-urgente .grupo-header .i {
+  color: var(--danger, #dc2626);
 }
 
-.sintoma-item {
+.grupo-moderado .grupo-header .i {
+  color: var(--warning, #d97706);
+}
+
+.grupo-leve .grupo-header .i {
+  color: var(--success, #15803d);
+}
+
+.grupo-header span {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.grupo-urgente .grupo-header span {
+  color: #991b1b;
+}
+
+.grupo-moderado .grupo-header span {
+  color: #92400e;
+}
+
+.grupo-leve .grupo-header span {
+  color: #166534;
+}
+
+.opciones-lista {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.opcion-item {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
   font-size: 0.95rem;
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
-.sintoma-item input[type="checkbox"] {
+.opcion-item input[type="checkbox"] {
   display: none;
 }
 
-.sintoma-check {
-  width: 20px;
-  height: 20px;
+.opcion-check {
+  width: 18px;
+  height: 18px;
   border: 2px solid var(--line, #e5e7eb);
-  border-radius: 6px;
+  border-radius: 5px;
   flex-shrink: 0;
   transition: all 0.2s;
 }
 
-.sintoma-item input[type="checkbox"]:checked + .sintoma-check {
+.opcion-item input[type="checkbox"]:checked + .opcion-check {
   background: var(--primary, #5a3cc2);
   border-color: var(--primary, #5a3cc2);
   position: relative;
 }
 
-.sintoma-item input[type="checkbox"]:checked + .sintoma-check::after {
+.opcion-item input[type="checkbox"]:checked + .opcion-check::after {
   content: '✓';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.sintoma-texto {
+.opcion-texto {
   color: var(--texto, #111827);
 }
 
@@ -1732,8 +1734,8 @@ textarea.in,
 }
 
 .check-circle {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: 2px solid var(--line, #e5e7eb);
   border-radius: 50%;
   flex-shrink: 0;
@@ -1758,20 +1760,22 @@ textarea.in,
   border-radius: 50%;
 }
 
-/* Botones del triaje */
-.btn-evaluar,
-.btn-final {
-  width: 100%;
-  padding: 14px 20px;
-  font-size: 1rem;
-  font-weight: 700;
-  border-radius: 10px;
+/* Botón final */
+.triaje-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
 .btn-final {
   background: linear-gradient(135deg, var(--primary, #5a3cc2), #4a3bb0);
   border: none;
   color: #fff;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
 .btn-final:disabled {

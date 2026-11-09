@@ -11,15 +11,18 @@
   </div>
 </div>
 
-<div class="triaje-container">
+<div class="triaje-wrapper">
   {% if mascotas %}
-  <form method="post" action="{{ url_for('triaje.nueva') }}" class="form">
+  <form method="post" action="{{ url_for('triaje.nueva') }}" class="form triaje-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div class="col-paciente">
-      <div class="card card-paciente">
-        <h3>Datos Básicos del Paciente</h3>
-
+    <!-- Tarjeta 1: Datos Básicos -->
+    <div class="triaje-card card-paciente">
+      <div class="card-header">
+        <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+        <span>Datos Básicos del Paciente</span>
+      </div>
+      <div class="card-body">
         <div class="field">
           <label for="mascota_id">Selecciona mascota <span class="req">*</span></label>
           <select class="in" id="mascota_id" name="mascota_id" required>
@@ -38,54 +41,72 @@
       </div>
     </div>
 
-    <div class="col-sintomas">
-      <div class="card card-sintomas">
-        <h3>Categorización de Síntomas por Gravedad</h3>
+    <!-- Tarjeta 2: Síntomas por Gravedad -->
+    <div class="triaje-card card-sintomas">
+      <div class="card-header">
+        <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+        <span>Síntomas por Gravedad</span>
+      </div>
+      <div class="card-body">
 
-        <div class="grupo-grupo grupo-urgente">
-          <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Graves / Emergencia (Rojo)</h4>
-          <div class="sintoma-lista">
+        <div class="grupo-sintomas urgente">
+          <div class="grupo-header">
+            <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+            <span>Graves / Emergencia (Rojo)</span>
+          </div>
+          <div class="opciones-lista">
             {% for clave, etiqueta in sintomas_predefinidos['Urgente'] %}
-            <label class="sintoma-item">
+            <label class="opcion-item">
               <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
-              <span class="sintoma-check"></span>
-              <span class="sintoma-texto">{{ etiqueta }}</span>
+              <span class="opcion-check"></span>
+              <span class="opcion-texto">{{ etiqueta }}</span>
             </label>
             {% endfor %}
           </div>
         </div>
 
-        <div class="grupo-grupo grupo-moderado">
-          <h4><svg class="i" aria-hidden="true"><use href="#alert"/></svg> Moderados / Urgencia</h4>
-          <div class="sintoma-lista">
+        <div class="grupo-sintomas moderado">
+          <div class="grupo-header">
+            <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+            <span>Moderados / Urgencia</span>
+          </div>
+          <div class="opciones-lista">
             {% for clave, etiqueta in sintomas_predefinidos['Moderado'] %}
-            <label class="sintoma-item">
+            <label class="opcion-item">
               <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
-              <span class="sintoma-check"></span>
-              <span class="sintoma-texto">{{ etiqueta }}</span>
+              <span class="opcion-check"></span>
+              <span class="opcion-texto">{{ etiqueta }}</span>
             </label>
             {% endfor %}
           </div>
         </div>
 
-        <div class="grupo-grupo grupo-leve">
-          <h4><svg class="i" aria-hidden="true"><use href="#check"/></svg> Leves / No Urgentes</h4>
-          <div class="sintoma-lista">
+        <div class="grupo-sintomas leve">
+          <div class="grupo-header">
+            <svg class="i" aria-hidden="true"><use href="#check"/></svg>
+            <span>Leves / No Urgentes</span>
+          </div>
+          <div class="opciones-lista">
             {% for clave, etiqueta in sintomas_predefinidos['Leve'] %}
-            <label class="sintoma-item">
+            <label class="opcion-item">
               <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
-              <span class="sintoma-check"></span>
-              <span class="sintoma-texto">{{ etiqueta }}</span>
+              <span class="opcion-check"></span>
+              <span class="opcion-texto">{{ etiqueta }}</span>
             </label>
             {% endfor %}
           </div>
         </div>
+
       </div>
     </div>
 
-    <div class="col-estado">
-      <div class="card card-estado">
-        <h3>Formulario de Estado General</h3>
+    <!-- Tarjeta 3: Estado General -->
+    <div class="triaje-card card-estado">
+      <div class="card-header">
+        <svg class="i" aria-hidden="true"><use href="#clip"/></svg>
+        <span>Estado General</span>
+      </div>
+      <div class="card-body">
 
         <div class="field estado-pregunta">
           <label>¿Está consciente?</label>
@@ -156,13 +177,15 @@
           Acepto que esta orientación es un triaje preliminar y no sustituye un diagnóstico veterinario.
         </label>
 
-        <div class="actions">
-          <button type="submit" class="btn btn-primary btn-final">
-            <svg class="i" aria-hidden="true"><use href="#send"/></svg>
-            Evaluar Gravedad y Contactar Veterinario
-          </button>
-        </div>
       </div>
+    </div>
+
+    <!-- Botón Final -->
+    <div class="triaje-actions">
+      <button type="submit" class="btn btn-primary btn-final">
+        <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+        Evaluar Gravedad y Contactar Veterinario
+      </button>
     </div>
   </form>
   {% else %}
@@ -196,10 +219,8 @@
 
     if (!btnFinal || !form) return;
 
-    // Habilitar el botón siempre que el formulario exista
     btnFinal.disabled = false;
 
-    // Validación al enviar: mostrar alerta si no hay nada seleccionado
     form.addEventListener('submit', function (e) {
       var checkboxes = document.querySelectorAll('input[name="sintomas_predefinidos"]');
       var radios = document.querySelectorAll('input[type="radio"]');
