@@ -15,11 +15,11 @@ def _registrar(client, email, nombre='Usuario Test', rol='dueno', cedula=None):
         'nombre': nombre,
         'email': email,
         'password': 'secreto123',
-        'rol': rol,
     }
     if cedula is not None:
         datos['cedula_profesional'] = cedula
-    return client.post('/registro', data=datos, follow_redirects=True)
+    ruta = '/registro/veterinario' if rol == 'veterinario' else '/registro/dueno'
+    return client.post(ruta, data=datos, follow_redirects=True)
 
 
 def _login(client, email):
@@ -53,7 +53,7 @@ def _crear_consulta(client, mascota_id, sintomas):
         '/triaje/nueva',
         data={
             'mascota_id': str(mascota_id),
-            'sintomas': sintomas,
+            'motivo': sintomas,
             'acepta_terminos_triage': 'on',
         },
         follow_redirects=True,
@@ -273,29 +273,28 @@ def test_hora_local_404_y_413(client):
     original = app.config['MAX_CONTENT_LENGTH']
     app.config['MAX_CONTENT_LENGTH'] = 10
     try:
-        respuesta = client.post('/registro', data={'nombre': 'x' * 100})
+        respuesta = client.post('/registro/dueno', data={'nombre': 'x' * 100})
         assert respuesta.status_code == 413
     finally:
         app.config['MAX_CONTENT_LENGTH'] = original
 
 
 def test_csrf_protege_formularios(client_csrf):
-    html = client_csrf.get('/registro').get_data(as_text=True)
+    html = client_csrf.get('/registro/dueno').get_data(as_text=True)
     token = _csrf_token(html)
     datos = {
         'nombre': 'CSRF Test',
         'email': 'csrf@test.local',
         'password': 'secreto123',
-        'rol': 'dueno',
     }
 
-    sin_token = client_csrf.post('/registro', data=datos)
+    sin_token = client_csrf.post('/registro/dueno', data=datos)
     assert sin_token.status_code == 400
     assert 'Solicitud inválida' in sin_token.get_data(as_text=True)
 
-    token = _csrf_token(client_csrf.get('/registro').get_data(as_text=True))
+    token = _csrf_token(client_csrf.get('/registro/dueno').get_data(as_text=True))
     con_token = client_csrf.post(
-        '/registro',
+        '/registro/dueno',
         data={**datos, 'csrf_token': token},
         follow_redirects=True,
     )

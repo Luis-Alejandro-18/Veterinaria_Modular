@@ -1,5 +1,7 @@
 import mimetypes
 import os
+import re
+import unicodedata
 from uuid import uuid4
 
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
@@ -20,14 +22,45 @@ triaje_bp = Blueprint('triaje', __name__, url_prefix='/triaje')
 EXTENSIONES_IMAGEN = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 EXTENSIONES_VIDEO = {'mp4', 'mov', 'avi', 'webm'}
 
+# Mapa clave -> etiqueta amigable para los síntomas predefinidos.
+SINTOMA_ETIQUETA = {}
+for _nivel, _sintomas in SINTOMAS_PREDEFINIDOS.items():
+    for _clave, _etiqueta in _sintomas:
+        SINTOMA_ETIQUETA[_clave] = _etiqueta
+
+# Mapa clave -> nivel de urgencia para los síntomas predefinidos.
+SINTOMA_NIVEL = {}
+for _nivel, _sintomas in SINTOMAS_PREDEFINIDOS.items():
+    for _clave, _etiqueta in _sintomas:
+        SINTOMA_NIVEL[_clave] = _nivel
+
+
+def _normalizar(texto):
+    """Pasa a minúsculas, quita acentos y colapsa espacios."""
+    if not texto:
+        return ''
+    texto = texto.lower()
+    texto = ''.join(
+        c for c in unicodedata.normalize('NFD', texto)
+        if unicodedata.category(c) != 'Mn'
+    )
+    return re.sub(r'\s+', ' ', texto).strip()
+
+
+# Expresiones regulares con límite de palabra para evitar falsos positivos
+# (p. ej. "tos" dentro de "vómitos"). Se aplican sobre texto ya normalizado.
 PALABRAS_URGENTES = [
-    'sangra', 'sangrado', 'convulsion', 'convulsión', 'no respira',
-    'dificultad para respirar', 'envenen', 'atropell', 'desmay',
-    'inconsciente', 'fractura', 'vomita sangre', 'parto',
+    r'\bsangr', r'\bhemorragi', r'\bveneno', r'\btoxico', r'\bintoxicaci',
+    r'\bconvuls', r'\bdesmay', r'\binconsciente', r'\bno respira',
+    r'\bdificultad para respirar', r'\bdificultad respir', r'\bcuesta respir',
+    r'\batropell', r'\baccidente', r'\bfractura', r'\bgolpe fuerte',
+    r'\bquemadura', r'\bparto', r'\bsangre en la heces', r'\bherida\w*',
+    r'\bno puede caminar',
 ]
 PALABRAS_MODERADAS = [
-    'vomita', 'diarrea', 'fiebre', 'cojea', 'dolor', 'hinchaz',
-    'letargo', 'no come', 'tos',
+    r'\bvomita', r'\bvomit', r'\bdiarrea', r'\bfiebre', r'\bcoje',
+    r'\bdolor', r'\bhinch\w*', r'\binflamaci', r'\bletargo', r'\bdecaed',
+    r'\bdecai', r'\bno come', r'\bno quiere comer', r'\btos\b',
 ]
 
 
@@ -41,6 +74,10 @@ def _redirect_veterinarios_crear():
             return redirect(url_for('veterinario.consultas_disponibles'))
 
 
+def _coincide(texto_norm, patrones):
+    return any(re.search(p, texto_norm) for p in patrones)
+
+
 def clasificar_urgencia(sintomas_texto, sintomas_predefinidos=None, estado_general=None):
     """Clasifica la urgencia con reglas simples por palabras clave, síntomas predefinidos y estado general.
 
@@ -48,8 +85,11 @@ def clasificar_urgencia(sintomas_texto, sintomas_predefinidos=None, estado_gener
         sintomas_texto: Texto libre de síntomas.
         sintomas_predefinidos: Lista de claves de síntomas predefinidos seleccionados.
         estado_general: Dict con respuestas del formulario de estado general.
+
+    Returns:
+        Uno de 'Urgente', 'Moderado', 'Leve'.
     """
-    texto = (sintomas_texto or '').lower()
+    texto = _normalizar(sintomas_texto)
     predefinidos = sintomas_predefinidos or []
     estado = estado_general or {}
 
@@ -63,24 +103,22 @@ def clasificar_urgencia(sintomas_texto, sintomas_predefinidos=None, estado_gener
     if estado.get('estado_heridas') == 'si':
         return 'Urgente'
 
-    # Si hay algún síntoma predefinido urgente, la urgencia es Urgente.
+    # Síntomas predefinidos: el nivel más grave gana.
     for clave in predefinidos:
-        for nivel, sintomas in SINTOMAS_PREDEFINIDOS.items():
-            if any(s[0] == clave for s in sintomas) and nivel == 'Urgente':
-                return 'Urgente'
+        if SINTOMA_NIVEL.get(clave) == 'Urgente':
+            return 'Urgente'
 
     # Palabras clave urgentes en el texto libre.
-    if any(palabra in texto for palabra in PALABRAS_URGENTES):
+    if _coincide(texto, PALABRAS_URGENTES):
         return 'Urgente'
 
-    # Si hay algún síntoma predefinido moderado, la urgencia es al menos Moderado.
+    # Síntomas predefinidos moderados.
     for clave in predefinidos:
-        for nivel, sintomas in SINTOMAS_PREDEFINIDOS.items():
-            if any(s[0] == clave for s in sintomas) and nivel == 'Moderado':
-                return 'Moderado'
+        if SINTOMA_NIVEL.get(clave) == 'Moderado':
+            return 'Moderado'
 
     # Palabras clave moderadas en el texto libre.
-    if any(palabra in texto for palabra in PALABRAS_MODERADAS):
+    if _coincide(texto, PALABRAS_MODERADAS):
         return 'Moderado'
 
     return 'Leve'
@@ -149,7 +187,8 @@ def nueva():
         if motivo:
             partes_sintomas.append('Motivo: ' + motivo)
         if sintomas_predefinidos:
-            partes_sintomas.append('Síntomas: ' + ', '.join(sintomas_predefinidos))
+            etiquetas = [SINTOMA_ETIQUETA.get(c, c) for c in sintomas_predefinidos]
+            partes_sintomas.append('Síntomas: ' + ', '.join(etiquetas))
 
         estado_partes = []
         if estado_consciente:
@@ -184,7 +223,7 @@ def nueva():
         consulta = Consulta(
             mascota_id=mascota.id,
             sintomas=sintomas_combinados,
-            nivel_urgencia=clasificar_urgencia(motivo, sintomas_predefinidos, estado_general),
+            nivel_urgencia=clasificar_urgencia(sintomas_combinados, sintomas_predefinidos, estado_general),
             estado='Pendiente',
             acepta_terminos_triage=True,
         )

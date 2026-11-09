@@ -1557,67 +1557,41 @@ textarea.in,
   margin: 0;
 }
 
-/* ===== Triaje Virtual — Diseño de tarjetas verticales ===== */
-.triaje-wrapper {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
+/* ===== Triaje Virtual — integrado al sistema de diseño ===== */
 .triaje-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
-.triaje-card {
-  border: 1px solid var(--line, #e5e7eb);
-  border-radius: 12px;
-  background: #fff;
-  overflow: hidden;
-}
-
-.triaje-card .card-header {
+.triaje-form h3 {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 18px;
-  background: #f8fafc;
-  border-bottom: 1px solid var(--line, #e5e7eb);
+  margin-top: 0;
 }
 
-.triaje-card .card-header .i {
-  width: 18px;
-  height: 18px;
-  color: var(--primary, #5a3cc2);
-}
-
-.triaje-card .card-header span {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--texto, #111827);
-}
-
-.triaje-card .card-body {
-  padding: 16px 18px;
+.triaje-form h3 .i {
+  width: 1.2em;
+  height: 1.2em;
+  color: var(--brand);
 }
 
 .grupo-sintomas {
-  border: 1px solid var(--line, #e5e7eb);
+  border: 1px solid var(--line);
   border-radius: 10px;
   margin-bottom: 14px;
   overflow: hidden;
 }
 
 .grupo-urgente {
-  border-left: 4px solid var(--danger, #dc2626);
+  border-left: 4px solid var(--danger);
 }
 
 .grupo-moderado {
-  border-left: 4px solid var(--warning, #d97706);
+  border-left: 4px solid var(--warning);
 }
 
 .grupo-leve {
-  border-left: 4px solid var(--success, #15803d);
+  border-left: 4px solid var(--ok);
 }
 
 .grupo-header {
@@ -1625,8 +1599,8 @@ textarea.in,
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: #f8fafc;
-  border-bottom: 1px solid var(--line, #e5e7eb);
+  background: var(--soft);
+  border-bottom: 1px solid var(--line);
 }
 
 .grupo-header .i {
@@ -1635,15 +1609,15 @@ textarea.in,
 }
 
 .grupo-urgente .grupo-header .i {
-  color: var(--danger, #dc2626);
+  color: var(--danger);
 }
 
 .grupo-moderado .grupo-header .i {
-  color: var(--warning, #d97706);
+  color: var(--warning);
 }
 
 .grupo-leve .grupo-header .i {
-  color: var(--success, #15803d);
+  color: var(--ok);
 }
 
 .grupo-header span {
@@ -1652,15 +1626,15 @@ textarea.in,
 }
 
 .grupo-urgente .grupo-header span {
-  color: #991b1b;
+  color: var(--danger);
 }
 
 .grupo-moderado .grupo-header span {
-  color: #92400e;
+  color: var(--warning);
 }
 
 .grupo-leve .grupo-header span {
-  color: #166534;
+  color: var(--ok);
 }
 
 .opciones-lista {
@@ -1686,15 +1660,15 @@ textarea.in,
 .opcion-check {
   width: 18px;
   height: 18px;
-  border: 2px solid var(--line, #e5e7eb);
+  border: 2px solid var(--line);
   border-radius: 5px;
   flex-shrink: 0;
   transition: all 0.2s;
 }
 
 .opcion-item input[type="checkbox"]:checked + .opcion-check {
-  background: var(--primary, #5a3cc2);
-  border-color: var(--primary, #5a3cc2);
+  background: var(--brand);
+  border-color: var(--brand);
   position: relative;
 }
 
@@ -1710,7 +1684,7 @@ textarea.in,
 }
 
 .opcion-texto {
-  color: var(--texto, #111827);
+  color: var(--ink);
 }
 
 /* Opciones Sí/No */
@@ -1726,7 +1700,7 @@ textarea.in,
   gap: 6px;
   cursor: pointer;
   font-size: 0.95rem;
-  color: var(--texto, #111827);
+  color: var(--ink);
 }
 
 .opcion-siono input[type="radio"] {
@@ -1736,15 +1710,15 @@ textarea.in,
 .check-circle {
   width: 18px;
   height: 18px;
-  border: 2px solid var(--line, #e5e7eb);
+  border: 2px solid var(--line);
   border-radius: 50%;
   flex-shrink: 0;
   transition: all 0.2s;
 }
 
 .opcion-siono input[type="radio"]:checked + .check-circle {
-  border-color: var(--primary, #5a3cc2);
-  background: var(--primary, #5a3cc2);
+  border-color: var(--brand);
+  background: var(--brand);
   position: relative;
 }
 
@@ -1760,29 +1734,6 @@ textarea.in,
   border-radius: 50%;
 }
 
-/* Botón final */
-.triaje-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.btn-final {
-  background: linear-gradient(135deg, var(--primary, #5a3cc2), #4a3bb0);
-  border: none;
-  color: #fff;
-  padding: 14px 24px;
-  font-size: 1rem;
-  font-weight: 700;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.btn-final:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 /* Info box inferior */
 .triaje-footer {
   margin-top: 24px;
@@ -1793,8 +1744,8 @@ textarea.in,
   align-items: flex-start;
   gap: 12px;
   padding: 16px 20px;
-  background: #f8fafc;
-  border: 1px solid var(--line, #e5e7eb);
+  background: var(--soft);
+  border: 1px solid var(--line);
   border-radius: 12px;
 }
 
@@ -1802,136 +1753,20 @@ textarea.in,
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  color: var(--warning, #d97706);
+  color: var(--warning);
   margin-top: 2px;
 }
 
 .info-box strong {
-  color: var(--texto, #111827);
+  color: var(--ink);
 }
 
 .info-box div {
-  color: var(--texto-suave, #6b7280);
+  color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.5;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .triaje-container {
-    grid-template-columns: 1fr;
-  }
-
-  .col-estado {
-    order: -1;
-  }
-}
-
-@media (max-width: 640px) {
-  .progress {
-    font-size: 0.8rem;
-    gap: 6px;
-  }
-
-  .grupo-grupo {
-    padding: 12px 14px;
-  }
-}
-
-/* Triaje guiado — síntomas predefinidos */
-.sintomas-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-top: 10px;
-}
-
-.sintoma-grupo {
-  border: 1px solid var(--line, #e5e7eb);
-  border-radius: 12px;
-  padding: 12px 14px;
-  background: #fff;
-}
-
-.sintoma-nivel {
-  margin: 0 0 10px 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.sintoma-nivel.nivel-urgente {
-  color: var(--danger, #dc2626);
-}
-
-.sintoma-nivel.nivel-moderado {
-  color: var(--warning, #d97706);
-}
-
-.sintoma-nivel.nivel-leve {
-  color: var(--success, #15803d);
-}
-
-.sintoma-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sintoma-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-
-.sintoma-item input[type="checkbox"] {
-  margin: 0;
-  width: 16px;
-  height: 16px;
-}
-
-.sintoma-texto {
-  color: var(--texto, #111827);
-}
-
 .mt-2 {
   margin-top: 12px !important;
-}
-
-/* Vista previa de urgencia */
-.urgencia-preview {
-  margin-top: 10px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  padding: 8px 12px;
-  border-radius: 8px;
-  display: inline-block;
-}
-
-.urgencia-urgente {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.urgencia-moderado {
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fcd34d;
-}
-
-.urgencia-leve {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-/* Responsive para síntomas */
-@media (max-width: 640px) {
-  .sintomas-grid {
-    grid-template-columns: 1fr;
-  }
 }
