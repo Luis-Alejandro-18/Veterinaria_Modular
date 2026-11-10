@@ -19,6 +19,8 @@
 - Checkbox `acepta_terminos_triage` obligatorio (exigido por el backend y la BD).
 - Clasificación de urgencia corregida: normalización (minúsculas, sin acentos), límites de palabra (evita "tos" dentro de "vómitos"), estado general crítico → Urgente, predefinidos urgentes/moderados/leves, clasifica solo el `motivo` como texto libre (no el texto combinado) para evitar falsos positivos como "Heridas abiertas: no", regla de herida refinada ("herida abierta/grave/profunda" = Urgente, "herida" genérica = Moderado). Matriz de 38 casos: 38/38 correctos.
 - Se guardan etiquetas amigables (no claves) en `Consulta.sintomas`.
+- Nuevo estado `Sin solicitar` al crear una consulta: el dueño ve clasificación + guía de primeros auxilios + botón "Solicitar asistencia con un doctor". Evidencias, respuestas del veterinario y chat quedan ocultos hasta solicitar. Al solicitar pasa a `Pendiente` y aparece en la bandeja veterinaria. Veterinarios no ven ni pueden tomar consultas `Sin solicitar`.
+- Chat de seguimiento: tras enviar un mensaje, vuelve al historial de chat (no sale de la conversación).
 
 ## Decisiones (y por qué)
 - Overpass API (OpenStreetMap) sin clave de API; gratis y sin registro.
@@ -39,6 +41,6 @@
 - Opcional: CI con PostgreSQL/PostGIS.
 
 ## Tests
-- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas (redirección, next=triaje, preselección, flujo completo, next inválido).
+- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar (estado inicial, vet no ve borrador, solicitar pasa a Pendiente, otro dueño no puede solicitar, solicitar dos veces).
 - `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
-- Total: 68 passed, 0 failed.
+- Total: 73 passed, 0 failed.
