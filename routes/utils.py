@@ -61,13 +61,13 @@ def condicion_consulta_visible(usuario):
 
 
 def mensajes_sin_leer_para(usuario):
-    """Cuenta mensajes de dueños sin leer en los casos visibles para un veterinario."""
+    """Cuenta mensajes de dueños sin leer en los casos que el veterinario ya tomó."""
     if usuario is None or usuario.rol != 'veterinario':
         return 0
     return (MensajeConsulta.query
             .join(Consulta, MensajeConsulta.consulta_id == Consulta.id)
             .filter(
-                condicion_consulta_visible(usuario),
+                Consulta.veterinario_id == usuario.id,
                 MensajeConsulta.remitente_id != usuario.id,
                 MensajeConsulta.leido.is_(False),
             )

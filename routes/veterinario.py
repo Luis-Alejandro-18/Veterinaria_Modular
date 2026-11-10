@@ -223,7 +223,7 @@ def mensajes():
 
     consultas = (Consulta.query
                  .join(Mascota)
-                 .filter(condicion_consulta_visible(g.usuario))
+                 .filter(Consulta.veterinario_id == g.usuario.id)
                  .order_by(Consulta.fecha_creacion.desc())
                  .all())
 

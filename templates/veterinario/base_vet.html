@@ -45,9 +45,9 @@
         <a href="{{ url_for('veterinario.mensajes') }}"
            class="{% if endpoint == 'veterinario.mensajes' %}on{% endif %}">
           <svg class="i" aria-hidden="true"><use href="#message"/></svg>
-          <span>Mensajes a dueños</span>
+          <span>Mensajes</span>
           {% if mensajes_sin_leer %}
-          <span class="vet-nav-badge" aria-label="{{ mensajes_sin_leer }} mensajes sin leer">{{ mensajes_sin_leer }}</span>
+          <span class="vet-nav-badge" aria-label="{{ mensajes_sin_leer }} mensaje{{ 's' if mensajes_sin_leer != 1 else '' }} sin leer">{{ mensajes_sin_leer }}</span>
           {% endif %}
         </a>
       </nav>

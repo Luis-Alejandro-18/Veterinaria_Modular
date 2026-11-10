@@ -1,0 +1,35 @@
+<div class="vet-conv-body" aria-live="polite">
+  {% if mensajes %}
+    {% for mensaje in mensajes %}
+    <div class="vet-msg {% if mensaje.remitente_id == usuario_actual.id %}own{% endif %}">
+      <div class="vet-msg-meta">
+        <span>{{ mensaje.remitente.nombre }}</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ mensaje.fecha_envio|local_time('%d/%m %H:%M') }}</span>
+      </div>
+      <div class="vet-msg-body">{{ mensaje.mensaje }}</div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="vet-conv-empty">
+      <p>Aún no hay mensajes en este caso. Escribe el primero para iniciar el seguimiento.</p>
+    </div>
+  {% endif %}
+</div>
+
+{% if consulta.estado != 'Cerrada' %}
+<form method="post" action="{{ url_for('veterinario.enviar_mensaje', consulta_id=consulta.id) }}" class="vet-compose">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="volver" value="{{ volver|default('chat') }}">
+  <div class="field">
+    <label class="vet-label" for="mensaje-{{ consulta.id }}">Mensaje para el dueño</label>
+    <textarea class="in" id="mensaje-{{ consulta.id }}" name="mensaje" rows="2" placeholder="Escribe un mensaje…" required></textarea>
+  </div>
+  <button type="submit" class="btn">
+    <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+    Enviar
+  </button>
+</form>
+{% else %}
+<div class="vet-note">El caso está cerrado. Ya no se pueden enviar mensajes.</div>
+{% endif %}

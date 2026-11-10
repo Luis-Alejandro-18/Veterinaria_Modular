@@ -56,6 +56,7 @@
           <th scope="col">Mascota</th>
           <th scope="col">Motivo del reporte</th>
           <th scope="col">Fotos</th>
+          <th scope="col">Chat</th>
           <th scope="col">Recibido</th>
           <th scope="col">Urgencia</th>
           <th scope="col"><span class="sr-only">Acciones</span></th>
@@ -78,6 +79,14 @@
           </td>
           <td><div class="vet-motivo">{{ consulta.sintomas|truncate(96, True) }}</div></td>
           <td>{{ consulta.evidencias|length }}</td>
+          <td>
+            {% set total_chat = consulta.mensajes_chat|length %}
+            {% if total_chat %}
+              <span class="vet-unread" title="Mensajes del dueño antes de tomar el caso">{{ total_chat }}</span>
+            {% else %}
+              <span class="hint">—</span>
+            {% endif %}
+          </td>
           <td>{{ consulta.fecha_creacion|local_time('%d/%m/%Y – %H:%M') }}</td>
           <td><span class="vet-pill {{ urgencia_class(consulta.nivel_urgencia) }}">{{ consulta.nivel_urgencia }}</span></td>
           <td>

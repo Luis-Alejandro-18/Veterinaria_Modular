@@ -1,6 +1,6 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-11-10 (Fase 4 — bandeja de solicitudes estilo Uber)
+> Última actualización: 2026-11-10 (Fase 4 — bandeja de solicitudes y mensajes solo de casos tomados)
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
@@ -11,6 +11,7 @@
 - Registro separado completado: `/registro` (landing), `/registro/dueno`, `/registro/veterinario` (cédula obligatoria).
 - Vista veterinario tipo Uber completada: `/veterinario/consultas-disponibles`, tomar consulta, `/veterinario/mis-consultas`.
 - Bandeja de veterinario = cola de **solicitudes por tomar** (solo `Pendiente` sin veterinario). Al tomar un caso desaparece de la bandeja y pasa a Tablero/Agenda; cerrados y en revisión no aparecen. Menú renombrado a "Solicitudes" con badge de casos disponibles.
+- Sección **Mensajes** (antes "Mensajes a dueños"): solo muestra conversaciones de casos ya tomados por el veterinario (incluye cerrados como historial). El badge de no leídos cuenta solo esos casos. En Solicitudes, un contador marca los mensajes previos del dueño antes de tomar el caso.
 - Chat de seguimiento completado: modelo MensajeConsulta, GET/POST /triaje/<id>/chat, historial y chat rápido en detalle.
 
 ## Triaje Virtual (estado actual)
@@ -42,6 +43,6 @@
 - Opcional: CI con PostgreSQL/PostGIS.
 
 ## Tests
-- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja (solo solicitudes por tomar, cerrados ocultos con filtro inválido, badge de disponibles).
+- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja + 3 tests de mensajes (solo casos tomados, badge solo de tomados, indicador de chat previo).
 - `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
-- Total: 76 passed, 0 failed.
+- Total: 79 passed, 0 failed.

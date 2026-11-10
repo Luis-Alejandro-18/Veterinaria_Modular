@@ -939,3 +939,94 @@ def test_badge_de_solicitudes_disponibles(client):
 
     bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
     assert '1 solicitud disponible' not in bandeja
+
+
+def test_mensajes_solo_muestra_casos_tomados(client):
+    _registrar(client, 'dueno-msg@test.local', nombre='Dueño Mensajes')
+    _login(client, 'dueno-msg@test.local')
+    _crear_mascota(client, 'Rex', 'Perro')
+    mascota_id = _id_mascota('dueno-msg@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Tos')
+    client.post(
+        f'/triaje/{consulta_id}/chat',
+        data={'mensaje': 'Hola, sigue tosiendo.'},
+        follow_redirects=True,
+    )
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-msg@test.local',
+        nombre='Dra. Mensajes',
+        rol='veterinario',
+        cedula='VET-MSG',
+    )
+    _login(client, 'vet-msg@test.local')
+
+    html = client.get('/veterinario/mensajes').get_data(as_text=True)
+    assert 'Rex' not in html
+    assert 'Aún no has tomado ningún caso' in html
+
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    html = client.get('/veterinario/mensajes').get_data(as_text=True)
+    assert 'Rex' in html
+    assert 'Hola, sigue tosiendo.' in html
+
+
+def test_badge_mensajes_solo_cuenta_casos_tomados(client):
+    _registrar(client, 'dueno-msg-badge@test.local', nombre='Dueño Msg Badge')
+    _login(client, 'dueno-msg-badge@test.local')
+    _crear_mascota(client, 'Mila', 'Gato')
+    mascota_id = _id_mascota('dueno-msg-badge@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Vómito')
+    client.post(
+        f'/triaje/{consulta_id}/chat',
+        data={'mensaje': 'Buenas, sigue vomitando.'},
+        follow_redirects=True,
+    )
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-msg-badge@test.local',
+        nombre='Dr. Msg Badge',
+        rol='veterinario',
+        cedula='VET-MSG-BADGE',
+    )
+    _login(client, 'vet-msg-badge@test.local')
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert '1 mensaje sin leer' not in bandeja
+
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert '1 mensaje sin leer' in bandeja
+
+
+def test_solicitud_muestra_indicador_de_chat_previo(client):
+    _registrar(client, 'dueno-chat-previo@test.local', nombre='Dueño Chat Previo')
+    _login(client, 'dueno-chat-previo@test.local')
+    _crear_mascota(client, 'Nala', 'Gato')
+    mascota_id = _id_mascota('dueno-chat-previo@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Diarrea')
+    client.post(
+        f'/triaje/{consulta_id}/chat',
+        data={'mensaje': 'Hola, tiene diarrea desde ayer.'},
+        follow_redirects=True,
+    )
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-chat-previo@test.local',
+        nombre='Dra. Chat Previo',
+        rol='veterinario',
+        cedula='VET-CHAT-PREV',
+    )
+    _login(client, 'vet-chat-previo@test.local')
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert 'Nala' in bandeja
+    assert 'Mensajes del dueño antes de tomar el caso' in bandeja
