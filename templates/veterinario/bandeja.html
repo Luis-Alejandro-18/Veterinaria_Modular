@@ -1,0 +1,104 @@
+{% extends 'veterinario/base_vet.html' %}
+{% from 'veterinario/_macros.html' import urgencia_class, edad %}
+
+{% block title %}Solicitudes — Panel veterinario{% endblock %}
+
+{% block content %}
+<div class="vet-head">
+  <div>
+    <h1>Solicitudes</h1>
+    <p>Casos nuevos esperando que un veterinario los tome. Los más urgentes aparecen primero.</p>
+  </div>
+  <div class="vet-head-actions">
+    <form method="get" action="{{ url_for('veterinario.bandeja') }}" class="vet-search-form" role="search">
+      {% if filtro != 'todos' %}
+        <input type="hidden" name="filtro" value="{{ filtro }}">
+      {% endif %}
+      <label class="sr-only" for="q">Buscar caso</label>
+      <input id="q" class="in" type="search" name="q" value="{{ q }}" placeholder="Buscar mascota o número de caso">
+    </form>
+    {% if siguiente_caso %}
+      <a class="btn" href="{{ url_for('veterinario.caso', consulta_id=siguiente_caso.id) }}">
+        Abrir siguiente caso
+        <svg class="i" aria-hidden="true"><use href="#arrow-right"/></svg>
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="vet-stats">
+  <div class="vet-stat vet-stat-new">
+    <span class="vet-stat-label">Disponibles</span>
+    <b>{{ stats.total }}</b>
+    <small>por tomar</small>
+  </div>
+  <div class="vet-stat vet-stat-urg">
+    <span class="vet-stat-label">Urgentes</span>
+    <b>{{ stats.urgentes }}</b>
+    <small>atender primero</small>
+  </div>
+</div>
+
+<div class="vet-panel">
+  <div class="vet-chips" role="navigation" aria-label="Filtrar solicitudes">
+    <a class="vet-chip {% if filtro == 'todos' %}on{% endif %}"
+       href="{{ url_for('veterinario.bandeja', filtro='todos', q=q if q else none) }}">Todas ({{ stats.total }})</a>
+    <a class="vet-chip {% if filtro == 'urgentes' %}on{% endif %}"
+       href="{{ url_for('veterinario.bandeja', filtro='urgentes', q=q if q else none) }}">Urgentes ({{ stats.urgentes }})</a>
+  </div>
+
+  {% if consultas %}
+  <div class="vet-table-wrap">
+    <table class="vet-table">
+      <thead>
+        <tr>
+          <th scope="col">Caso</th>
+          <th scope="col">Mascota</th>
+          <th scope="col">Motivo del reporte</th>
+          <th scope="col">Fotos</th>
+          <th scope="col">Recibido</th>
+          <th scope="col">Urgencia</th>
+          <th scope="col"><span class="sr-only">Acciones</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for consulta in consultas %}
+        <tr class="{% if consulta.nivel_urgencia == 'Urgente' and consulta.estado != 'Cerrada' %}urg{% endif %}">
+          <td class="vet-case-id">#{{ consulta.id }}</td>
+          <td>
+            <div class="vet-pet">
+              <div class="vet-pet-avatar" aria-hidden="true">
+                <svg class="i"><use href="#paw"/></svg>
+              </div>
+              <div>
+                <b>{{ consulta.mascota.nombre }}</b>
+                <small>{{ consulta.mascota.especie }} · {{ edad(consulta.mascota) }}</small>
+              </div>
+            </div>
+          </td>
+          <td><div class="vet-motivo">{{ consulta.sintomas|truncate(96, True) }}</div></td>
+          <td>{{ consulta.evidencias|length }}</td>
+          <td>{{ consulta.fecha_creacion|local_time('%d/%m/%Y – %H:%M') }}</td>
+          <td><span class="vet-pill {{ urgencia_class(consulta.nivel_urgencia) }}">{{ consulta.nivel_urgencia }}</span></td>
+          <td>
+            {% if consulta.estado == 'Pendiente' and consulta.veterinario_id is none %}
+              <form method="post" action="{{ url_for('veterinario.tomar_consulta', consulta_id=consulta.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn sm">Tomar caso</button>
+              </form>
+            {% else %}
+              <a class="btn ghost sm" href="{{ url_for('veterinario.caso', consulta_id=consulta.id) }}">Abrir</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="vet-empty">
+    <p>No hay solicitudes que coincidan con este filtro.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

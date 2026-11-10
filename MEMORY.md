@@ -1,6 +1,6 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-11-08 (Fase 4 — triaje rediseñado y clasif. corregida)
+> Última actualización: 2026-11-10 (Fase 4 — bandeja de solicitudes estilo Uber)
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
@@ -10,6 +10,7 @@
 - Mapa completado: clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática, marcador de usuario, toggle real/local, fallback a BD local, radio 2/5/10/20 km (default 5 km).
 - Registro separado completado: `/registro` (landing), `/registro/dueno`, `/registro/veterinario` (cédula obligatoria).
 - Vista veterinario tipo Uber completada: `/veterinario/consultas-disponibles`, tomar consulta, `/veterinario/mis-consultas`.
+- Bandeja de veterinario = cola de **solicitudes por tomar** (solo `Pendiente` sin veterinario). Al tomar un caso desaparece de la bandeja y pasa a Tablero/Agenda; cerrados y en revisión no aparecen. Menú renombrado a "Solicitudes" con badge de casos disponibles.
 - Chat de seguimiento completado: modelo MensajeConsulta, GET/POST /triaje/<id>/chat, historial y chat rápido en detalle.
 
 ## Triaje Virtual (estado actual)
@@ -41,6 +42,6 @@
 - Opcional: CI con PostgreSQL/PostGIS.
 
 ## Tests
-- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar (estado inicial, vet no ve borrador, solicitar pasa a Pendiente, otro dueño no puede solicitar, solicitar dos veces).
+- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja (solo solicitudes por tomar, cerrados ocultos con filtro inválido, badge de disponibles).
 - `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
-- Total: 73 passed, 0 failed.
+- Total: 76 passed, 0 failed.

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
                    render_template, request, url_for)
-from sqlalchemy import and_, case, or_
+from sqlalchemy import case, or_
 
 from constants import (ESTADO_CERRADA, ESTADO_SIN_SOLICITAR, ESTADOS_CONSULTA,
                        TRANSICIONES_ESTADO)
@@ -19,7 +19,7 @@ ORDEN_URGENCIA = case(
     else_=2,
 )
 
-FILTROS_BANDEJA = ('todos', 'nuevos', 'urgentes', 'revision', 'cerrados')
+FILTROS_BANDEJA = ('todos', 'urgentes')
 
 
 def _mensajes_de(consulta):
@@ -59,33 +59,27 @@ def _puede_actuar(consulta):
 @veterinario_bp.route('/bandeja')
 @veterinario_required
 def bandeja():
-    """Reportes de dueños: casos disponibles y los que atiende el veterinario."""
+    """Solicitudes entrantes: casos pendientes que aún no tienen veterinario."""
     q = request.args.get('q', '').strip()
     filtro = request.args.get('filtro', 'todos')
     if filtro not in FILTROS_BANDEJA:
         filtro = 'todos'
 
-    visibles = Consulta.query.filter(condicion_consulta_visible(g.usuario))
+    disponibles = (Consulta.query
+                   .join(Mascota)
+                   .filter(
+                       Consulta.estado == 'Pendiente',
+                       Consulta.veterinario_id.is_(None),
+                   ))
+
     stats = {
-        'total': visibles.count(),
-        'nuevos': visibles.filter(
-            Consulta.estado == 'Pendiente',
-            Consulta.veterinario_id.is_(None),
-        ).count(),
-        'urgentes': visibles.filter(
+        'total': disponibles.count(),
+        'urgentes': disponibles.filter(
             Consulta.nivel_urgencia == 'Urgente',
-            Consulta.estado != ESTADO_CERRADA,
         ).count(),
-        'revision': visibles.filter(
-            Consulta.estado.in_(('En Atención', 'Requiere Presencial')),
-        ).count(),
-        'cerrados': visibles.filter(Consulta.estado == ESTADO_CERRADA).count(),
     }
 
-    consulta_query = (Consulta.query
-                      .join(Mascota)
-                      .filter(condicion_consulta_visible(g.usuario)))
-
+    consulta_query = disponibles
     if q:
         like = f'%{q}%'
         criterios = [Mascota.nombre.ilike(like), Consulta.sintomas.ilike(like)]
@@ -94,22 +88,10 @@ def bandeja():
             criterios.append(Consulta.id == int(numero))
         consulta_query = consulta_query.filter(or_(*criterios))
 
-    if filtro == 'nuevos':
-        consulta_query = consulta_query.filter(
-            Consulta.estado == 'Pendiente',
-            Consulta.veterinario_id.is_(None),
-        )
-    elif filtro == 'urgentes':
+    if filtro == 'urgentes':
         consulta_query = consulta_query.filter(
             Consulta.nivel_urgencia == 'Urgente',
-            Consulta.estado != ESTADO_CERRADA,
         )
-    elif filtro == 'revision':
-        consulta_query = consulta_query.filter(
-            Consulta.estado.in_(('En Atención', 'Requiere Presencial')),
-        )
-    elif filtro == 'cerrados':
-        consulta_query = consulta_query.filter(Consulta.estado == ESTADO_CERRADA)
 
     consultas = (consulta_query
                  .order_by(ORDEN_URGENCIA, Consulta.fecha_creacion.asc())
@@ -117,12 +99,8 @@ def bandeja():
 
     siguiente_caso = (Consulta.query
                       .filter(
-                          or_(
-                              and_(Consulta.estado == 'Pendiente',
-                                   Consulta.veterinario_id.is_(None)),
-                              Consulta.veterinario_id == g.usuario.id,
-                          ),
-                          Consulta.estado != ESTADO_CERRADA,
+                          Consulta.estado == 'Pendiente',
+                          Consulta.veterinario_id.is_(None),
                       )
                       .order_by(ORDEN_URGENCIA, Consulta.fecha_creacion.asc())
                       .first())
@@ -471,7 +449,7 @@ def cambiar_estado(consulta_id):
 @veterinario_bp.route('/consultas-disponibles')
 @veterinario_required
 def consultas_disponibles():
-    return redirect(url_for('veterinario.bandeja', filtro='nuevos'))
+    return redirect(url_for('veterinario.bandeja'))
 
 
 @veterinario_bp.route('/mis-consultas')

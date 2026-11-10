@@ -74,6 +74,18 @@ def mensajes_sin_leer_para(usuario):
             .count())
 
 
+def solicitudes_disponibles_para(usuario):
+    """Cuenta solicitudes pendientes sin veterinario: casos por tomar en la bandeja."""
+    if usuario is None or usuario.rol != 'veterinario':
+        return 0
+    return (Consulta.query
+            .filter(
+                Consulta.estado == 'Pendiente',
+                Consulta.veterinario_id.is_(None),
+            )
+            .count())
+
+
 def componer_respuesta(diagnostico='', recomendaciones='', mensaje=''):
     """Combina diagnóstico, recomendaciones y mensaje libre en el texto que ve el dueño."""
     partes = []

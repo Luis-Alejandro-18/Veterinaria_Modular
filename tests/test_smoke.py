@@ -457,7 +457,7 @@ def test_login_veterinario_redirige_al_panel(client):
         follow_redirects=True,
     ).get_data(as_text=True)
 
-    assert 'Bandeja de casos' in html
+    assert 'Solicitudes' in html
     assert 'Dra. Panel' in html
     assert 'Agenda de seguimiento' in html
 
@@ -511,7 +511,7 @@ def test_flujo_completo_del_panel_veterinario(client):
     _login(client, 'vet-flujo@test.local')
 
     bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
-    assert 'Bandeja de casos' in bandeja
+    assert 'Solicitudes' in bandeja
     assert 'Nube' in bandeja
     assert 'Tomar caso' in bandeja
 
@@ -741,7 +741,7 @@ def test_veterinario_no_ve_consulta_sin_solicitar(client):
     _login(client, 'vetnosol@test.local')
 
     bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
-    assert 'No hay casos que coincidan con este filtro.' in bandeja
+    assert 'No hay solicitudes que coincidan con este filtro.' in bandeja
 
     # Intenta abrir el caso directamente: no debe verlo.
     with app.app_context():
@@ -846,3 +846,96 @@ def test_solicitar_dos_veces_no_cambia_nada(client):
     with app.app_context():
         consulta = db.session.get(Consulta, consulta_id)
         assert consulta.estado == 'Pendiente'
+
+
+def test_bandeja_solo_muestra_solicitudes_por_tomar(client):
+    _registrar(client, 'dueno-cola@test.local', nombre='Dueño Cola')
+    _login(client, 'dueno-cola@test.local')
+    _crear_mascota(client, 'Toby', 'Perro')
+    mascota_id = _id_mascota('dueno-cola@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Tos persistente')
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-cola@test.local',
+        nombre='Dra. Cola',
+        rol='veterinario',
+        cedula='VET-COLA',
+    )
+    _login(client, 'vet-cola@test.local')
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert 'Toby' in bandeja
+    assert 'Tomar caso' in bandeja
+    assert 'Disponibles' in bandeja
+
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert 'Toby' not in bandeja
+    assert 'No hay solicitudes que coincidan con este filtro.' in bandeja
+
+    assert 'Toby' in client.get('/veterinario/tablero').get_data(as_text=True)
+    assert 'Toby' in client.get('/veterinario/agenda').get_data(as_text=True)
+
+
+def test_bandeja_oculta_casos_cerrados(client):
+    _registrar(client, 'dueno-cerrado@test.local', nombre='Dueño Cerrado')
+    _login(client, 'dueno-cerrado@test.local')
+    _crear_mascota(client, 'Luna', 'Gato')
+    mascota_id = _id_mascota('dueno-cerrado@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Diarrea')
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-cerrado@test.local',
+        nombre='Dr. Cerrado',
+        rol='veterinario',
+        cedula='VET-CERRADO',
+    )
+    _login(client, 'vet-cerrado@test.local')
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    with app.app_context():
+        consulta = db.session.get(Consulta, consulta_id)
+        consulta.estado = 'Cerrada'
+        db.session.commit()
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert 'Luna' not in bandeja
+    assert 'No hay solicitudes que coincidan con este filtro.' in bandeja
+
+    # El filtro de cerrados ya no existe: cae a "Todas" y tampoco los muestra.
+    bandeja = client.get('/veterinario/bandeja?filtro=cerrados').get_data(as_text=True)
+    assert 'Luna' not in bandeja
+
+    # La agenda conserva el historial de cerrados recientes.
+    assert 'Luna' in client.get('/veterinario/agenda').get_data(as_text=True)
+
+
+def test_badge_de_solicitudes_disponibles(client):
+    _registrar(client, 'dueno-badge@test.local', nombre='Dueño Badge')
+    _login(client, 'dueno-badge@test.local')
+    _crear_mascota(client, 'Kira', 'Perro')
+    mascota_id = _id_mascota('dueno-badge@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Cojera')
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'vet-badge@test.local',
+        nombre='Dra. Badge',
+        rol='veterinario',
+        cedula='VET-BADGE',
+    )
+    _login(client, 'vet-badge@test.local')
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert '1 solicitud disponible' in bandeja
+
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert '1 solicitud disponible' not in bandeja

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2b1a73">
+  <title>{% block title %}Panel veterinario — Vet en un Click{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/estilosGlobales.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body class="vet-body">
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  {% include '_sprite.html' %}
+
+  {% set endpoint = request.endpoint or '' %}
+  <div class="vet-shell">
+    <aside class="vet-side">
+      <a class="vet-logo" href="{{ url_for('veterinario.bandeja') }}">
+        <svg class="vet-logo-paw" aria-hidden="true"><use href="#paw"/></svg>
+        <span>Vet en un Click</span>
+      </a>
+
+      <nav class="vet-nav" aria-label="Panel veterinario">
+        <a href="{{ url_for('veterinario.bandeja') }}"
+           class="{% if endpoint in ('veterinario.bandeja', 'veterinario.caso', 'veterinario.chat') %}on{% endif %}">
+          <svg class="i" aria-hidden="true"><use href="#inbox"/></svg>
+          <span>Solicitudes</span>
+          {% if solicitudes_disponibles %}
+          <span class="vet-nav-badge" aria-label="{{ solicitudes_disponibles }} solicitud{{ 'es' if solicitudes_disponibles != 1 else '' }} disponible{{ 's' if solicitudes_disponibles != 1 else '' }}">{{ solicitudes_disponibles }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('veterinario.tablero') }}"
+           class="{% if endpoint == 'veterinario.tablero' %}on{% endif %}">
+          <svg class="i" aria-hidden="true"><use href="#board"/></svg>
+          <span>Tablero por estado</span>
+        </a>
+        <a href="{{ url_for('veterinario.agenda') }}"
+           class="{% if endpoint == 'veterinario.agenda' %}on{% endif %}">
+          <svg class="i" aria-hidden="true"><use href="#calendar"/></svg>
+          <span>Agenda de seguimiento</span>
+        </a>
+        <a href="{{ url_for('veterinario.mensajes') }}"
+           class="{% if endpoint == 'veterinario.mensajes' %}on{% endif %}">
+          <svg class="i" aria-hidden="true"><use href="#message"/></svg>
+          <span>Mensajes a dueños</span>
+          {% if mensajes_sin_leer %}
+          <span class="vet-nav-badge" aria-label="{{ mensajes_sin_leer }} mensajes sin leer">{{ mensajes_sin_leer }}</span>
+          {% endif %}
+        </a>
+      </nav>
+
+      <div class="vet-user">
+        <div class="vet-avatar" aria-hidden="true">{{ usuario_actual.nombre[0]|upper if usuario_actual else 'V' }}</div>
+        <div class="vet-user-info">
+          <div class="vet-user-name">{{ usuario_actual.nombre if usuario_actual else 'Veterinario' }}</div>
+          <div class="vet-user-role">
+            {% if usuario_actual and usuario_actual.cedula_profesional %}
+              Céd. {{ usuario_actual.cedula_profesional }}
+            {% else %}
+              Medicina veterinaria
+            {% endif %}
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('auth.logout') }}" class="vet-logout-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="vet-logout" title="Cerrar sesión" aria-label="Cerrar sesión">
+            <svg class="i" aria-hidden="true"><use href="#logout"/></svg>
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <main class="vet-main" id="contenido">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages" aria-live="polite">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
