@@ -79,6 +79,7 @@ from routes.triaje import triaje_bp
 from routes.mapa import mapa_bp
 from routes.main import main_bp
 from routes.veterinario import veterinario_bp
+from routes.chat_api import chat_api_bp
 from routes.utils import (load_logged_in_user, mensajes_sin_leer_para,
                           solicitudes_disponibles_para)
 
@@ -88,6 +89,7 @@ app.register_blueprint(triaje_bp)
 app.register_blueprint(mapa_bp)
 app.register_blueprint(main_bp)
 app.register_blueprint(veterinario_bp)
+app.register_blueprint(chat_api_bp)
 
 
 @app.before_request

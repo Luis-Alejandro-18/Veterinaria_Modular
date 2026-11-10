@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5a3cc2">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Vet en un Click{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,8 +53,8 @@
             <a href="{{ url_for('mascotas.lista') }}"{% if endpoint.startswith('mascotas.') %} aria-current="page"{% endif %}>Mis mascotas</a>
             <a href="{{ url_for('triaje.lista') }}"{% if endpoint.startswith('triaje.') %} aria-current="page"{% endif %}>Triaje</a>
           {% else %}
-            <a href="{{ url_for('veterinario.consultas_disponibles') }}"{% if endpoint.startswith('veterinario.') %} aria-current="page"{% endif %}>Consultas disponibles</a>
-            <a href="{{ url_for('veterinario.mis_consultas') }}"{% if endpoint.startswith('veterinario.') %} aria-current="page"{% endif %}>Mis consultas</a>
+            <a href="{{ url_for('veterinario.bandeja') }}"{% if endpoint.startswith('veterinario.') %} aria-current="page"{% endif %}>Bandeja de casos</a>
+            <a href="{{ url_for('veterinario.tablero') }}"{% if endpoint == 'veterinario.tablero' %} aria-current="page"{% endif %}>Tablero</a>
           {% endif %}
         {% endif %}
       </nav>

@@ -85,6 +85,12 @@ def _csrf_token(html):
     return coincidencia.group(1)
 
 
+def _csrf_meta(html):
+    coincidencia = re.search(r'name="csrf-token" content="([^"]+)"', html)
+    assert coincidencia is not None
+    return coincidencia.group(1)
+
+
 def test_registro_login_y_triaje_urgente(client):
     _registrar(client, 'dueno1@test.local', nombre='Dueño Uno')
     _login(client, 'dueno1@test.local')
@@ -1030,3 +1036,243 @@ def test_solicitud_muestra_indicador_de_chat_previo(client):
     bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
     assert 'Nala' in bandeja
     assert 'Mensajes del dueño antes de tomar el caso' in bandeja
+
+
+def test_chat_api_envia_y_recibe(client):
+    _registrar(client, 'api-chat-1@test.local', nombre='Dueño API Uno')
+    _login(client, 'api-chat-1@test.local')
+    _crear_mascota(client, 'Pixel', 'Perro')
+    mascota_id = _id_mascota('api-chat-1@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Tos')
+
+    respuesta = client.get(f'/api/consultas/{consulta_id}/mensajes?desde_id=0')
+    assert respuesta.status_code == 200
+    data = respuesta.get_json()
+    assert data['mensajes'] == []
+    assert data['puede_escribir'] is True
+    assert data['estado'] == 'Pendiente'
+
+    respuesta = client.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Hola, mi perro tose.'},
+    )
+    assert respuesta.status_code == 201
+    creado = respuesta.get_json()['mensaje']
+    assert creado['texto'] == 'Hola, mi perro tose.'
+    assert creado['es_propio'] is True
+
+    data = client.get(f'/api/consultas/{consulta_id}/mensajes?desde_id=0').get_json()
+    assert len(data['mensajes']) == 1
+    assert data['mensajes'][0]['id'] == creado['id']
+
+    data = client.get(
+        f'/api/consultas/{consulta_id}/mensajes?desde_id={creado["id"]}'
+    ).get_json()
+    assert data['mensajes'] == []
+
+
+def test_chat_api_vet_sin_tomar_no_accede(client):
+    _registrar(client, 'api-chat-2@test.local', nombre='Dueño API Dos')
+    _login(client, 'api-chat-2@test.local')
+    _crear_mascota(client, 'Bruno', 'Perro')
+    mascota_id = _id_mascota('api-chat-2@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Diarrea')
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'api-vet-2@test.local',
+        nombre='Dra. API Dos',
+        rol='veterinario',
+        cedula='VET-API-2',
+    )
+    _login(client, 'api-vet-2@test.local')
+
+    respuesta = client.get(f'/api/consultas/{consulta_id}/mensajes')
+    assert respuesta.status_code == 403
+    assert 'Primero debes tomar este caso.' in respuesta.get_json()['error']
+
+    respuesta = client.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Hola'},
+    )
+    assert respuesta.status_code == 403
+
+
+def test_chat_api_vet_tomado_responde_bidireccional(client):
+    _registrar(client, 'api-chat-3@test.local', nombre='Dueño API Tres')
+    _login(client, 'api-chat-3@test.local')
+    _crear_mascota(client, 'Kira', 'Gato')
+    mascota_id = _id_mascota('api-chat-3@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Vómito')
+    client.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Mensaje del dueño'},
+    )
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'api-vet-3@test.local',
+        nombre='Dr. API Tres',
+        rol='veterinario',
+        cedula='VET-API-3',
+    )
+    _login(client, 'api-vet-3@test.local')
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    data = client.get(f'/api/consultas/{consulta_id}/mensajes').get_json()
+    assert len(data['mensajes']) == 1
+    assert data['mensajes'][0]['texto'] == 'Mensaje del dueño'
+    assert data['mensajes'][0]['es_propio'] is False
+
+    respuesta = client.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Respuesta del veterinario'},
+    )
+    assert respuesta.status_code == 201
+    assert respuesta.get_json()['mensaje']['es_propio'] is True
+    client.post('/logout')
+
+    _login(client, 'api-chat-3@test.local')
+    data = client.get(f'/api/consultas/{consulta_id}/mensajes').get_json()
+    textos = {mensaje['texto']: mensaje['es_propio'] for mensaje in data['mensajes']}
+    assert textos['Mensaje del dueño'] is True
+    assert textos['Respuesta del veterinario'] is False
+
+
+def test_chat_api_consulta_cerrada_solo_lectura(client):
+    _registrar(client, 'api-chat-4@test.local', nombre='Dueño API Cuatro')
+    _login(client, 'api-chat-4@test.local')
+    _crear_mascota(client, 'Luna', 'Gato')
+    mascota_id = _id_mascota('api-chat-4@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Tos')
+
+    with app.app_context():
+        consulta = db.session.get(Consulta, consulta_id)
+        consulta.estado = 'Cerrada'
+        db.session.commit()
+
+    respuesta = client.get(f'/api/consultas/{consulta_id}/mensajes')
+    assert respuesta.status_code == 200
+    assert respuesta.get_json()['puede_escribir'] is False
+
+    respuesta = client.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Hola'},
+    )
+    assert respuesta.status_code == 409
+    assert 'cerrada' in respuesta.get_json()['error']
+
+
+def test_chat_api_sin_solicitar_bloqueado(client):
+    _registrar(client, 'api-chat-5@test.local', nombre='Dueño API Cinco')
+    _login(client, 'api-chat-5@test.local')
+    _crear_mascota(client, 'Nube', 'Gato')
+    mascota_id = _id_mascota('api-chat-5@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Tos', solicitar=False)
+
+    respuesta = client.get(f'/api/consultas/{consulta_id}/mensajes')
+    assert respuesta.status_code == 409
+
+    respuesta = client.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Hola'},
+    )
+    assert respuesta.status_code == 409
+
+
+def test_chat_api_sin_sesion(client):
+    _registrar(client, 'api-chat-6@test.local', nombre='Dueño API Seis')
+    _login(client, 'api-chat-6@test.local')
+    _crear_mascota(client, 'Toby', 'Perro')
+    mascota_id = _id_mascota('api-chat-6@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Tos')
+    client.post('/logout')
+
+    respuesta = client.get(f'/api/consultas/{consulta_id}/mensajes')
+    assert respuesta.status_code == 401
+
+
+def test_chat_api_requiere_csrf(client_csrf):
+    from werkzeug.security import generate_password_hash
+
+    with app.app_context():
+        usuario = Usuario(
+            nombre='Dueño API CSRF',
+            email='api-chat-csrf@test.local',
+            password_hash=generate_password_hash('secreto123'),
+            rol='dueno',
+        )
+        db.session.add(usuario)
+        db.session.commit()
+        mascota = Mascota(usuario_id=usuario.id, nombre='Csrf', especie='Perro')
+        db.session.add(mascota)
+        db.session.commit()
+        consulta = Consulta(
+            mascota_id=mascota.id,
+            sintomas='Motivo: Tos',
+            nivel_urgencia='Moderado',
+            estado='Pendiente',
+            acepta_terminos_triage=True,
+        )
+        db.session.add(consulta)
+        db.session.commit()
+        consulta_id = consulta.id
+
+    html = client_csrf.get('/login').get_data(as_text=True)
+    client_csrf.post(
+        '/login',
+        data={
+            'email': 'api-chat-csrf@test.local',
+            'password': 'secreto123',
+            'csrf_token': _csrf_token(html),
+        },
+        follow_redirects=True,
+    )
+
+    sin_token = client_csrf.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Hola'},
+    )
+    assert sin_token.status_code == 400
+
+    html = client_csrf.get(f'/triaje/{consulta_id}/chat').get_data(as_text=True)
+    token = _csrf_meta(html)
+    con_token = client_csrf.post(
+        f'/api/consultas/{consulta_id}/mensajes',
+        json={'mensaje': 'Hola'},
+        headers={'X-CSRFToken': token},
+    )
+    assert con_token.status_code == 201
+
+
+def test_chat_paginas_cargan_polling_y_csrf(client):
+    _registrar(client, 'api-chat-ui@test.local', nombre='Dueño UI Chat')
+    _login(client, 'api-chat-ui@test.local')
+    _crear_mascota(client, 'Chati', 'Perro')
+    mascota_id = _id_mascota('api-chat-ui@test.local')
+    consulta_id = _crear_consulta(client, mascota_id, 'Tos')
+
+    html = client.get(f'/triaje/{consulta_id}/chat').get_data(as_text=True)
+    assert 'js/chat.js' in html
+    assert 'id="chat-messages"' in html
+    assert f'/api/consultas/{consulta_id}/mensajes' in html
+    assert 'name="csrf-token"' in html
+    client.post('/logout')
+
+    _registrar(
+        client,
+        'api-vet-ui@test.local',
+        nombre='Dra. UI Chat',
+        rol='veterinario',
+        cedula='VET-UI-CHAT',
+    )
+    _login(client, 'api-vet-ui@test.local')
+    client.post(f'/veterinario/casos/{consulta_id}/tomar', follow_redirects=True)
+
+    html = client.get(f'/veterinario/casos/{consulta_id}/chat').get_data(as_text=True)
+    assert 'js/chat.js' in html
+    assert 'id="chat-messages"' in html
+    assert f'/api/consultas/{consulta_id}/mensajes' in html
+    assert 'name="csrf-token"' in html

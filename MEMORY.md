@@ -12,6 +12,7 @@
 - Vista veterinario tipo Uber completada: `/veterinario/consultas-disponibles`, tomar consulta, `/veterinario/mis-consultas`.
 - Bandeja de veterinario = cola de **solicitudes por tomar** (solo `Pendiente` sin veterinario). Al tomar un caso desaparece de la bandeja y pasa a Tablero/Agenda; cerrados y en revisión no aparecen. Menú renombrado a "Solicitudes" con badge de casos disponibles.
 - Sección **Mensajes** (antes "Mensajes a dueños"): solo muestra conversaciones de casos ya tomados por el veterinario (incluye cerrados como historial). El badge de no leídos cuenta solo esos casos. En Solicitudes, un contador marca los mensajes previos del dueño antes de tomar el caso.
+- Chat bidireccional sin recargas: API JSON `/api/consultas/<id>/mensajes` (GET/POST) y `/leido`, con polling cada 2.5 s (`static/js/chat.js`). Envío optimista, auto-scroll, Enter para enviar, pausa al ocultar la pestaña y CSRF por header `X-CSRFToken`. Sin dependencias nuevas.
 - Chat de seguimiento completado: modelo MensajeConsulta, GET/POST /triaje/<id>/chat, historial y chat rápido en detalle.
 
 ## Triaje Virtual (estado actual)
@@ -43,6 +44,6 @@
 - Opcional: CI con PostgreSQL/PostGIS.
 
 ## Tests
-- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja + 3 tests de mensajes (solo casos tomados, badge solo de tomados, indicador de chat previo).
+- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja + 3 tests de mensajes + 8 tests de la API de chat (envío/lectura, vet sin tomar, bidireccional, cerrada, sin solicitar, sin sesión, CSRF, wiring de plantillas).
 - `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
-- Total: 79 passed, 0 failed.
+- Total: 87 passed, 0 failed.
