@@ -4,12 +4,14 @@ ROLES = ('dueno', 'veterinario')
 
 NIVELES_URGENCIA = ('Leve', 'Moderado', 'Urgente')
 
-ESTADOS_CONSULTA = ('Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada')
+ESTADOS_CONSULTA = ('Sin solicitar', 'Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada')
 
 ESTADO_CERRADA = 'Cerrada'
+ESTADO_SIN_SOLICITAR = 'Sin solicitar'
 
 # Transiciones permitidas para el MVP.
 TRANSICIONES_ESTADO = {
+    'Sin solicitar': ('Pendiente',),
     'Pendiente': ('En Atención', 'Requiere Presencial', 'Cerrada'),
     'En Atención': ('Requiere Presencial', 'Cerrada'),
     'Requiere Presencial': ('En Atención', 'Cerrada'),

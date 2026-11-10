@@ -2,8 +2,10 @@ import os
 from functools import wraps
 
 from flask import current_app, flash, g, redirect, session, url_for
+from sqlalchemy import and_, or_
 
-from models import db, Usuario
+from constants import ESTADO_SIN_SOLICITAR
+from models import Consulta, MensajeConsulta, Usuario, db
 
 
 def load_logged_in_user():
@@ -41,11 +43,47 @@ def veterinario_required(view):
 
 
 def puede_ver_consulta(consulta):
-    """Un veterinario ve todas las consultas; un dueño solo las de sus mascotas."""
+    """Un veterinario ve todas las consultas salvo las 'Sin solicitar'; un dueño solo las de sus mascotas."""
     usuario = getattr(g, 'usuario', None)
     if usuario is None:
         return False
+    if usuario.rol == 'veterinario' and consulta.estado == ESTADO_SIN_SOLICITAR:
+        return False
     return usuario.rol == 'veterinario' or consulta.mascota.usuario_id == usuario.id
+
+
+def condicion_consulta_visible(usuario):
+    """Casos que puede ver un veterinario: los suyos y los pendientes sin asignar."""
+    return or_(
+        Consulta.veterinario_id == usuario.id,
+        and_(Consulta.estado == 'Pendiente', Consulta.veterinario_id.is_(None)),
+    )
+
+
+def mensajes_sin_leer_para(usuario):
+    """Cuenta mensajes de dueños sin leer en los casos visibles para un veterinario."""
+    if usuario is None or usuario.rol != 'veterinario':
+        return 0
+    return (MensajeConsulta.query
+            .join(Consulta, MensajeConsulta.consulta_id == Consulta.id)
+            .filter(
+                condicion_consulta_visible(usuario),
+                MensajeConsulta.remitente_id != usuario.id,
+                MensajeConsulta.leido.is_(False),
+            )
+            .count())
+
+
+def componer_respuesta(diagnostico='', recomendaciones='', mensaje=''):
+    """Combina diagnóstico, recomendaciones y mensaje libre en el texto que ve el dueño."""
+    partes = []
+    if diagnostico:
+        partes.append(f'Diagnóstico: {diagnostico}')
+    if recomendaciones:
+        partes.append(f'Recomendaciones: {recomendaciones}')
+    if mensaje:
+        partes.append(mensaje)
+    return '\n\n'.join(partes).strip()
 
 
 def ruta_fisica_evidencia(evidencia):

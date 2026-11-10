@@ -56,7 +56,7 @@ def _id_mascota(email):
         return mascota.id
 
 
-def _crear_consulta(client, mascota_id, sintomas):
+def _crear_consulta(client, mascota_id, sintomas, solicitar=True):
     client.post(
         '/triaje/nueva',
         data={
@@ -71,7 +71,12 @@ def _crear_consulta(client, mascota_id, sintomas):
                     .filter_by(mascota_id=mascota_id)
                     .order_by(Consulta.id.desc())
                     .first())
-        return consulta.id
+    if solicitar:
+        client.post(
+            f'/triaje/{consulta.id}/solicitar',
+            follow_redirects=True,
+        )
+    return consulta.id
 
 
 def _csrf_token(html):
@@ -692,3 +697,152 @@ def test_next_invalido_no_redirige_fuera_del_sitio(client):
     # Nunca redirige fuera del sitio; va a mascotas/nueva sin next o al listado.
     assert 'sitio-malicioso.com' not in respuesta
     assert 'Registro exitoso' not in respuesta
+
+
+def test_consulta_nace_sin_solicitar(client):
+    _registrar(client, 'nosolicitar1@test.local', nombre='No Solicitar Uno')
+    _login(client, 'nosolicitar1@test.local')
+    _crear_mascota(client)
+    mascota_id = _id_mascota('nosolicitar1@test.local')
+
+    _crear_consulta(client, mascota_id, 'Tos leve', solicitar=False)
+
+    with app.app_context():
+        consulta = (Consulta.query
+                    .filter_by(mascota_id=mascota_id)
+                    .order_by(Consulta.id.desc())
+                    .first())
+        assert consulta.estado == 'Sin solicitar'
+        assert consulta.nivel_urgencia == 'Moderado'
+
+    html = client.get(f'/triaje/{consulta.id}').get_data(as_text=True)
+    assert 'Moderado' in html
+    assert 'Solicitar asistencia con un doctor' in html
+    assert 'Evidencias' not in html
+    assert 'Respuestas del veterinario' not in html
+    assert 'Chat de seguimiento' not in html
+
+
+def test_veterinario_no_ve_consulta_sin_solicitar(client):
+    _registrar(client, 'nosolicitar2@test.local', nombre='No Solicitar Dos')
+    _login(client, 'nosolicitar2@test.local')
+    _crear_mascota(client)
+    mascota_id = _id_mascota('nosolicitar2@test.local')
+    _crear_consulta(client, mascota_id, 'Vómito repetido', solicitar=False)
+
+    client.post('/logout')
+    _registrar(
+        client,
+        'vetnosol@test.local',
+        nombre='Vet No Sol',
+        rol='veterinario',
+        cedula='VET-NS',
+    )
+    _login(client, 'vetnosol@test.local')
+
+    bandeja = client.get('/veterinario/bandeja').get_data(as_text=True)
+    assert 'No hay casos que coincidan con este filtro.' in bandeja
+
+    # Intenta abrir el caso directamente: no debe verlo.
+    with app.app_context():
+        consulta_id = (Consulta.query
+                       .filter_by(mascota_id=mascota_id)
+                       .order_by(Consulta.id.desc())
+                       .first().id)
+    html = client.get(f'/triaje/{consulta_id}', follow_redirects=True).get_data(as_text=True)
+    assert 'aún no ha sido enviado' in html or 'No tienes permiso' in html
+
+    # Intenta tomarlo: no debe estar disponible.
+    respuesta = client.post(
+        f'/veterinario/casos/{consulta_id}/tomar',
+        follow_redirects=True,
+    ).get_data(as_text=True)
+    assert 'ya no está disponible' in respuesta or 'No tienes permiso' in respuesta
+
+
+def test_solicitar_asistencia_pasa_a_pendiente_y_se_habilitan_secciones(client):
+    _registrar(client, 'solicitar1@test.local', nombre='Solicitar Uno')
+    _login(client, 'solicitar1@test.local')
+    _crear_mascota(client)
+    mascota_id = _id_mascota('solicitar1@test.local')
+    _crear_consulta(client, mascota_id, 'Fiebre y tos', solicitar=False)
+
+    with app.app_context():
+        consulta_id = (Consulta.query
+                       .filter_by(mascota_id=mascota_id)
+                       .order_by(Consulta.id.desc())
+                       .first().id)
+
+    client.post(f'/triaje/{consulta_id}/solicitar', follow_redirects=True)
+
+    with app.app_context():
+        consulta = db.session.get(Consulta, consulta_id)
+        assert consulta.estado == 'Pendiente'
+
+    html = client.get(f'/triaje/{consulta_id}').get_data(as_text=True)
+    assert 'Evidencias' in html
+    assert 'Respuestas del veterinario' in html
+    assert 'Chat de seguimiento' in html
+    assert 'Solicitar asistencia con un doctor' not in html
+
+
+def test_otro_dueno_no_puede_solicitar_asistencia_ajena(client):
+    with app.app_context():
+        from werkzeug.security import generate_password_hash
+        usuario_a = Usuario(
+            nombre='Dueño A',
+            email='duenoA@test.local',
+            password_hash=generate_password_hash('secreto123'),
+            rol='dueno',
+        )
+        db.session.add(usuario_a)
+        db.session.commit()
+        mascota = Mascota(usuario_id=usuario_a.id, nombre='Firulais', especie='Perro')
+        db.session.add(mascota)
+        db.session.commit()
+        mascota_id_a = mascota.id
+        consulta = Consulta(
+            mascota_id=mascota_id_a,
+            sintomas='Motivo: Tos',
+            nivel_urgencia='Moderado',
+            estado='Sin solicitar',
+            acepta_terminos_triage=True,
+        )
+        db.session.add(consulta)
+        db.session.commit()
+        consulta_id = consulta.id
+
+    _login(client, 'duenoA@test.local')
+    _registrar(client, 'duenoB@test.local', nombre='Dueño B')
+    _login(client, 'duenoB@test.local')
+
+    respuesta = client.post(
+        f'/triaje/{consulta_id}/solicitar',
+        follow_redirects=True,
+    ).get_data(as_text=True)
+    assert 'No puedes solicitar asistencia de esta consulta.' in respuesta
+
+
+def test_solicitar_dos_veces_no_cambia_nada(client):
+    _registrar(client, 'duplicar@test.local', nombre='Duplicar')
+    _login(client, 'duplicar@test.local')
+    _crear_mascota(client)
+    mascota_id = _id_mascota('duplicar@test.local')
+    _crear_consulta(client, mascota_id, 'Diarrea', solicitar=False)
+
+    with app.app_context():
+        consulta_id = (Consulta.query
+                       .filter_by(mascota_id=mascota_id)
+                       .order_by(Consulta.id.desc())
+                       .first().id)
+
+    client.post(f'/triaje/{consulta_id}/solicitar', follow_redirects=True)
+    respuesta = client.post(
+        f'/triaje/{consulta_id}/solicitar',
+        follow_redirects=True,
+    ).get_data(as_text=True)
+    assert 'ya ha sido enviada' in respuesta
+
+    with app.app_context():
+        consulta = db.session.get(Consulta, consulta_id)
+        assert consulta.estado == 'Pendiente'

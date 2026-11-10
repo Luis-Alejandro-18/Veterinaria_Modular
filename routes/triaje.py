@@ -10,7 +10,7 @@ from PIL import Image, UnidentifiedImageError
 from sqlalchemy import or_
 from werkzeug.utils import secure_filename
 
-from constants import (ESTADOS_CONSULTA, ESTADO_CERRADA, NIVELES_URGENCIA,
+from constants import (ESTADO_CERRADA, ESTADO_SIN_SOLICITAR, ESTADOS_CONSULTA, NIVELES_URGENCIA,
                        SINTOMAS_PREDEFINIDOS, TRANSICIONES_ESTADO)
 from data.primeros_auxilios import obtener_guia
 from models import Consulta, Evidencia, Mascota, MensajeConsulta, RespuestaOrientacion, db
@@ -234,7 +234,7 @@ def nueva():
             mascota_id=mascota.id,
             sintomas=sintomas_combinados,
             nivel_urgencia=clasificar_urgencia(motivo, sintomas_predefinidos, estado_general),
-            estado='Pendiente',
+            estado=ESTADO_SIN_SOLICITAR,
             acepta_terminos_triage=True,
         )
         db.session.add(consulta)
@@ -245,6 +245,25 @@ def nueva():
     return render_template('triaje/form.html', mascotas=mascotas,
                            sintomas_predefinidos=SINTOMAS_PREDEFINIDOS,
                            mascota_preseleccionada=preseleccionada)
+
+
+@triaje_bp.route('/<int:consulta_id>/solicitar', methods=['POST'])
+@login_required
+def solicitar_asistencia(consulta_id):
+    """Pasa una consulta de 'Sin solicitar' a 'Pendiente' para que los veterinarios la vean."""
+    consulta = Consulta.query.get_or_404(consulta_id)
+    if consulta.mascota.usuario_id != g.usuario.id:
+        flash('No puedes solicitar asistencia de esta consulta.', 'error')
+        return redirect(url_for('triaje.lista'))
+
+    if consulta.estado != ESTADO_SIN_SOLICITAR:
+        flash('Esta consulta ya ha sido enviada a los veterinarios.', 'info')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    consulta.estado = 'Pendiente'
+    db.session.commit()
+    flash('Tu solicitud ha sido enviada. Un veterinario revisará el caso pronto.', 'success')
+    return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
 
 @triaje_bp.route('/<int:consulta_id>')
@@ -300,6 +319,10 @@ def subir_evidencia(consulta_id):
         flash('No se puede subir evidencia a una consulta cerrada.', 'error')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('Primero debes solicitar asistencia con un doctor antes de subir evidencia.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
     archivo = request.files.get('archivo')
     if not archivo or archivo.filename == '':
         flash('Selecciona un archivo para subir.', 'error')
@@ -346,6 +369,10 @@ def responder(consulta_id):
         flash('No se puede responder una consulta cerrada.', 'error')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('No se puede responder una consulta que aún no ha sido enviada.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
     mensaje = request.form.get('mensaje', '').strip()
     diagnostico = request.form.get('diagnostico', '').strip()
     recomendaciones = request.form.get('recomendaciones', '').strip()
@@ -373,7 +400,9 @@ def responder(consulta_id):
 def cambiar_estado(consulta_id):
     consulta = Consulta.query.get_or_404(consulta_id)
     nuevo_estado = request.form.get('estado')
-    if nuevo_estado not in ESTADOS_CONSULTA:
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('Una consulta sin solicitar no puede cambiar de estado directamente.', 'error')
+    elif nuevo_estado not in ESTADOS_CONSULTA:
         flash('Estado inválido.', 'error')
     elif nuevo_estado not in TRANSICIONES_ESTADO.get(consulta.estado, ()):
         flash(f'No se puede pasar de "{consulta.estado}" a "{nuevo_estado}".', 'error')
@@ -415,6 +444,10 @@ def chat_enviar(consulta_id):
         flash('No se puede escribir en una consulta cerrada.', 'error')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('Primero debes solicitar asistencia con un doctor antes de escribir en el chat.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
     mensaje = request.form.get('mensaje', '').strip()
     if not mensaje:
         flash('Escribe un mensaje antes de enviarlo.', 'error')
@@ -430,4 +463,4 @@ def chat_enviar(consulta_id):
     flash('Mensaje enviado.', 'success')
     if g.usuario.rol == 'veterinario':
         return redirect(url_for('veterinario.chat', consulta_id=consulta.id))
-    return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+    return redirect(url_for('triaje.chat_historial', consulta_id=consulta.id))

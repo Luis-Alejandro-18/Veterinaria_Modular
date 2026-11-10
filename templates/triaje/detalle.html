@@ -49,6 +49,19 @@
   <p class="first-aid-warning">{{ guia.advertencia }}</p>
 </div>
 
+{% if consulta.estado == 'Sin solicitar' %}
+<div class="card">
+  <h2>Resultado del triaje</h2>
+  <p>Tu mascota ha sido clasificada como <strong>{{ consulta.nivel_urgencia }}</strong>. Para que un veterinario revise el caso, solicita asistencia con un doctor.</p>
+  <form method="post" action="{{ url_for('triaje.solicitar_asistencia', consulta_id=consulta.id) }}" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn">
+      <svg class="i" aria-hidden="true"><use href="#phone"/></svg>
+      Solicitar asistencia con un doctor
+    </button>
+  </form>
+</div>
+{% else %}
 <div class="card">
   <h2>Evidencias</h2>
   {% if consulta.evidencias %}
@@ -91,7 +104,11 @@
       {% endfor %}
     </div>
   {% else %}
-    <p class="hint mt-2">Sin respuestas todavía.</p>
+    {% if consulta.estado == 'Pendiente' and not consulta.veterinario %}
+      <p class="hint mt-2">Solicitud enviada. Esperando que un veterinario tome el caso.</p>
+    {% else %}
+      <p class="hint mt-2">Sin respuestas todavía.</p>
+    {% endif %}
   {% endif %}
 
   {% if usuario_actual.rol == 'veterinario' %}
@@ -142,4 +159,5 @@
     <button type="submit" class="btn">Enviar</button>
   </form>
 </div>
+{% endif %}
 {% endblock %}

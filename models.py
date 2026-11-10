@@ -75,7 +75,7 @@ class Consulta(db.Model):
 
     sintomas = db.Column(db.Text, nullable=False)
     nivel_urgencia = db.Column(db.String(20), nullable=True)  # 'Leve', 'Moderado', 'Urgente'
-    estado = db.Column(db.String(50), default='Pendiente')  # 'Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada'
+    estado = db.Column(db.String(50), default='Sin solicitar')  # 'Sin solicitar', 'Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada'
 
     # Seguro legal: el usuario acepta que esto es triaje, no un diagnóstico definitivo
     acepta_terminos_triage = db.Column(db.Boolean, nullable=False)
