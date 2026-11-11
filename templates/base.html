@@ -47,7 +47,7 @@
       <nav class="links" aria-label="Principal">
         <a href="{{ url_for('index') }}"{% if endpoint == 'index' %} aria-current="page"{% endif %}>Inicio</a>
         {% if usuario_actual %}
-          <a href="{{ url_for('main.dashboard') }}"{% if endpoint.startswith('main.') %} aria-current="page"{% endif %}>Dashboard</a>
+          <a href="{{ url_for('main.dashboard') }}"{% if endpoint.startswith('main.') %} aria-current="page"{% endif %}>Historial</a>
           {% if usuario_actual.rol == 'dueno' %}
             <a href="{{ url_for('mapa.mapa') }}"{% if endpoint.startswith('mapa.') %} aria-current="page"{% endif %}>Clínicas</a>
             <a href="{{ url_for('mascotas.lista') }}"{% if endpoint.startswith('mascotas.') %} aria-current="page"{% endif %}>Mis mascotas</a>
