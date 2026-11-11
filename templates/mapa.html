@@ -11,21 +11,13 @@
   <svg class="i" aria-hidden="true"><use href="#pin"/></svg>
   <div>
     <h1>Clínicas 24/7</h1>
-    <p>Clínicas veterinarias cercanas en el Área Metropolitana de Guadalajara.</p>
+    <p>Clínicas veterinarias reales cercanas a ti, obtenidas de OpenStreetMap.</p>
   </div>
 </div>
 
 <div class="card">
   <div class="map-toolbar">
-    <p class="hint">Explora el mapa o busca las clínicas más cercanas a tu ubicación.</p>
-
-    <div class="filtro-fuente">
-      <label for="fuente-datos">Origen de los datos:</label>
-      <select id="fuente-datos" name="fuente-datos">
-        <option value="reales">Clínicas reales (OpenStreetMap)</option>
-        <option value="locales">Clínicas registradas (base local)</option>
-      </select>
-    </div>
+    <p class="hint">Explora el mapa o busca las clínicas veterinarias reales más cercanas a tu ubicación.</p>
 
     <div class="filtro-radio">
       <label for="radio-busqueda">Radio:</label>
@@ -44,8 +36,6 @@
   </div>
 
   <div id="map" class="map"
-       data-url-clinicas="{{ url_for('mapa.clinicas') }}"
-       data-url-cercanas="{{ url_for('mapa.clinicas_cercanas') }}"
        data-url-reales="{{ url_for('mapa.clinicas_reales') }}"></div>
 
   <div id="resultados" aria-live="polite"></div>
@@ -57,15 +47,14 @@
 <script>
   (function () {
     const contenedorMapa = document.getElementById('map');
-    const urlClinicas = contenedorMapa.dataset.urlClinicas;
-    const urlCercanas = contenedorMapa.dataset.urlCercanas;
     const urlReales = contenedorMapa.dataset.urlReales;
     const contenedor = document.getElementById('resultados');
     const boton = document.getElementById('btn-cercanas');
-    const selectFuente = document.getElementById('fuente-datos');
     const selectRadio = document.getElementById('radio-busqueda');
 
     let radioSeleccionado = parseInt(selectRadio.value, 10) || 5000;
+    let ultimaUbicacion = null;
+    let buscando = false;
 
     const mapa = L.map(contenedorMapa).setView([20.6736, -103.344], 11);
 
@@ -86,21 +75,17 @@
     }
 
     function crearPopup(clinica) {
-      const partes = [
-        '<strong>' + escapar(clinica.nombre) + '</strong>',
-      ];
+      const partes = ['<strong>' + escapar(clinica.nombre) + '</strong>'];
       if (clinica.direccion) {
         partes.push(escapar(clinica.direccion));
       }
       if (clinica.telefono) {
         partes.push(escapar(clinica.telefono));
       }
-      if (clinica.distancia_m) {
-        partes.push('Distancia: ' + escapar(clinica.distancia_m) + ' m');
+      if (clinica.distancia_m != null) {
+        partes.push('Distancia: ' + formatearDistancia(clinica.distancia_m));
       }
-      if (clinica.fuente === 'overpass') {
-        partes.push('<small style="opacity:0.7">Fuente: OpenStreetMap</small>');
-      }
+      partes.push('<small style="opacity:0.7">Fuente: OpenStreetMap</small>');
       return partes.join('<br>');
     }
 
@@ -149,26 +134,39 @@
       contenedor.appendChild(parrafo);
     }
 
-    function mostrarResultados(clinicas, fuenteLabel) {
+    function formatearDistancia(metros) {
+      if (metros == null) {
+        return '';
+      }
+      if (metros < 1000) {
+        return Math.round(metros) + ' m';
+      }
+      return (metros / 1000).toFixed(1) + ' km';
+    }
+
+    function radioKmLabel() {
+      return (radioSeleccionado / 1000).toFixed(0);
+    }
+
+    function mostrarResultados(clinicas) {
       contenedor.replaceChildren();
 
       const titulo = document.createElement('h2');
       titulo.textContent = 'Clínicas cercanas';
       contenedor.appendChild(titulo);
 
-      if (fuenteLabel) {
-        const etiqueta = document.createElement('small');
-        etiqueta.textContent = 'Fuente: ' + fuenteLabel;
-        etiqueta.style.display = 'block';
-        etiqueta.style.marginBottom = '0.5rem';
-        etiqueta.style.opacity = '0.7';
-        contenedor.appendChild(etiqueta);
-      }
+      const etiqueta = document.createElement('small');
+      etiqueta.textContent = 'Fuente: OpenStreetMap';
+      etiqueta.style.display = 'block';
+      etiqueta.style.marginBottom = '0.5rem';
+      etiqueta.style.opacity = '0.7';
+      contenedor.appendChild(etiqueta);
 
       if (clinicas.length === 0) {
         const vacio = document.createElement('p');
         vacio.className = 'hint';
-        vacio.textContent = 'No se encontraron clínicas en un radio de ' + radioKmLabel() + ' km.';
+        vacio.textContent = 'No se encontraron clínicas veterinarias en un radio de ' +
+          radioKmLabel() + ' km. Prueba ampliar el radio.';
         contenedor.appendChild(vacio);
         return;
       }
@@ -176,81 +174,84 @@
       const lista = document.createElement('ul');
       clinicas.forEach(function (clinica) {
         const item = document.createElement('li');
-
         const nombre = document.createElement('b');
         nombre.textContent = clinica.nombre;
 
         const detalle = document.createElement('span');
-        detalle.textContent = ' — ' + clinica.distancia_m + ' m';
-
-        if (clinica.telefono) {
-          detalle.textContent += ' — ' + escapar(clinica.telefono);
-        }
+        detalle.textContent = ' — ' + formatearDistancia(clinica.distancia_m);
 
         item.append(nombre, detalle);
+
+        if (clinica.telefono) {
+          const telefono = document.createElement('a');
+          telefono.href = 'tel:' + clinica.telefono;
+          telefono.textContent = ' · ' + clinica.telefono;
+          item.appendChild(telefono);
+        }
+
         lista.appendChild(item);
       });
       contenedor.appendChild(lista);
     }
 
-    function cargarCercanas(lat, lng, fuente) {
-      radioSeleccionado = parseInt(selectRadio.value, 10) || 5000;
-      const radioKm = (radioSeleccionado / 1000).toFixed(0);
-
-      let url;
-      if (fuente === 'reales') {
-        url = urlReales + '?lat=' + encodeURIComponent(lat) +
-              '&lng=' + encodeURIComponent(lng) + '&radio=' + radioSeleccionado;
+    function ajustarVista(lat, lng, clinicas) {
+      const puntos = [[lat, lng]];
+      clinicas.forEach(function (clinica) {
+        if (clinica.lat != null && clinica.lng != null) {
+          puntos.push([clinica.lat, clinica.lng]);
+        }
+      });
+      if (puntos.length > 1) {
+        mapa.fitBounds(L.latLngBounds(puntos).pad(0.15), { maxZoom: 15 });
       } else {
-        url = urlCercanas + '?lat=' + encodeURIComponent(lat) +
-              '&lng=' + encodeURIComponent(lng) + '&radio=' + radioSeleccionado;
+        mapa.setView([lat, lng], 13);
       }
-
-      boton.disabled = true;
-      mostrarMensaje('Buscando clínicas cercanas (radio ' + radioKm + ' km)…');
-
-      fetch(url)
-        .then(function (respuesta) { return respuesta.json(); })
-        .then(function (datos) {
-          let clinicas;
-          let fuenteLabel;
-
-          if (datos.error) {
-            mostrarMensaje(datos.error);
-            return;
-          }
-
-          if (datos.clinicas) {
-            clinicas = datos.clinicas;
-            fuenteLabel = datos.fuente === 'overpass' ? 'OpenStreetMap' : 'Base local';
-          } else {
-            clinicas = datos;
-            fuenteLabel = 'Base local';
-          }
-
-          agregarMarcadores(clinicas);
-          mapa.setView([lat, lng], 13);
-          mostrarUbicacionUsuario(lat, lng);
-          mostrarResultados(clinicas, fuenteLabel);
-        })
-        .catch(function () {
-          mostrarMensaje('No se pudieron buscar las clínicas cercanas.');
-        })
-        .finally(function () {
-          boton.disabled = false;
-        });
     }
 
-    // Cargar clínicas generales (todas las clínicas) al inicio
-    fetch(urlClinicas)
-      .then(function (respuesta) { return respuesta.json(); })
-      .then(function (clinicas) {
-        limpiarMarcadores();
+    async function buscar(lat, lng) {
+      if (buscando) {
+        return;
+      }
+      buscando = true;
+      boton.disabled = true;
+      radioSeleccionado = parseInt(selectRadio.value, 10) || 5000;
+
+      const control = new AbortController();
+      const temporizador = setTimeout(function () { control.abort(); }, 80000);
+
+      mostrarMensaje('Consultando OpenStreetMap… puede tardar hasta un minuto.');
+
+      try {
+        const url = urlReales + '?lat=' + encodeURIComponent(lat) +
+                    '&lng=' + encodeURIComponent(lng) +
+                    '&radio=' + radioSeleccionado;
+        const respuesta = await fetch(url, {
+          signal: control.signal,
+          headers: { 'Accept': 'application/json' },
+        });
+        const datos = await respuesta.json().catch(function () { return {}; });
+        if (!respuesta.ok) {
+          throw new Error(datos.error || 'No se pudieron obtener las clínicas reales.');
+        }
+
+        const clinicas = datos.clinicas || [];
+        ultimaUbicacion = { lat: lat, lng: lng };
         agregarMarcadores(clinicas);
-      })
-      .catch(function () {
-        mostrarMensaje('No se pudieron cargar las clínicas.');
-      });
+        mostrarUbicacionUsuario(lat, lng);
+        ajustarVista(lat, lng, clinicas);
+        mostrarResultados(clinicas);
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          mostrarMensaje('La búsqueda tardó demasiado. Overpass puede estar saturado; intenta de nuevo.');
+        } else {
+          mostrarMensaje(error.message || 'No se pudieron buscar las clínicas cercanas.');
+        }
+      } finally {
+        clearTimeout(temporizador);
+        buscando = false;
+        boton.disabled = false;
+      }
+    }
 
     function solicitarUbicacion() {
       if (!navigator.geolocation) {
@@ -265,61 +266,55 @@
         function (posicion) {
           const lat = posicion.coords.latitude;
           const lng = posicion.coords.longitude;
-          const fuente = selectFuente.value;
-          cargarCercanas(lat, lng, fuente);
+          ultimaUbicacion = { lat: lat, lng: lng };
+          buscar(lat, lng);
         },
         function (error) {
-          let mensaje = 'No se pudo obtener tu ubicación.';
-          if (error.code === error.PERMISSION_DENIED) {
-            mensaje = 'Permiso de ubicación denegado. Mostrando clínicas registradas.';
-            mostrarMensaje(mensaje);
-            fetch(urlClinicas)
-              .then(function (r) { return r.json(); })
-              .then(function (clinicas) {
-                limpiarMarcadores();
-                agregarMarcadores(clinicas);
-                mostrarResultados(clinicas, 'Base local');
-              });
-          }
           boton.disabled = false;
+          if (error.code === error.PERMISSION_DENIED) {
+            mostrarMensaje('Permiso de ubicación denegado. Actívalo para buscar clínicas cercanas a ti.');
+          } else {
+            mostrarMensaje('No se pudo obtener tu ubicación. Intenta de nuevo.');
+          }
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
 
-    function radioKmLabel() {
-      return (radioSeleccionado / 1000).toFixed(0);
-    }
-
     selectRadio.addEventListener('change', function () {
       radioSeleccionado = parseInt(selectRadio.value, 10) || 5000;
-      mostrarMensaje('Radio actualizado a ' + radioKmLabel() + ' km.');
+      if (ultimaUbicacion) {
+        buscar(ultimaUbicacion.lat, ultimaUbicacion.lng);
+      } else {
+        mostrarMensaje('Radio actualizado a ' + radioKmLabel() +
+                       ' km. Pulsa "Actualizar cercanas" para buscar.');
+      }
     });
 
     boton.addEventListener('click', function () {
-      solicitarUbicacion();
+      if (ultimaUbicacion) {
+        buscar(ultimaUbicacion.lat, ultimaUbicacion.lng);
+      } else {
+        solicitarUbicacion();
+      }
     });
 
-    selectFuente.addEventListener('change', function () {
-      // Al cambiar la fuente, recargar con la ubicación actual si ya se tiene
-      // Si no hay ubicación guardada, solo cambiará la fuente al buscar de nuevo.
-      mostrarMensaje('Seleccionado: ' + selectFuente.options[selectFuente.selectedIndex].text);
-    });
-
-    // Geolocalización automática al cargar la página
+    // Geolocalización automática al cargar la página.
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         function (posicion) {
           const lat = posicion.coords.latitude;
           const lng = posicion.coords.longitude;
-          const fuente = selectFuente.value;
-          cargarCercanas(lat, lng, fuente);
+          ultimaUbicacion = { lat: lat, lng: lng };
+          buscar(lat, lng);
         },
         function () {
-          // Si falla la geolocalización automática, ya se cargaron las clínicas generales arriba.
+          mostrarMensaje('Activa el permiso de ubicación para ver las clínicas cercanas a ti.');
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
+    } else {
+      mostrarMensaje('La geolocalización no está disponible en este navegador.');
     }
   })();
 </script>

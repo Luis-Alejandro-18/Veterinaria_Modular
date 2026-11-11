@@ -1,60 +1,35 @@
-from math import radians, sin, cos, sqrt, atan2
+"""Mapa de clínicas veterinarias reales usando Overpass API (OpenStreetMap)."""
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from math import atan2, cos, radians, sin, sqrt
 
 from flask import Blueprint, jsonify, render_template, request
-from sqlalchemy import text
-
-from models import db
 
 mapa_bp = Blueprint('mapa', __name__)
 
-# Overpass API (OpenStreetMap) — sin clave de API requerida.
-# Lista de instancias públicas con fallback entre ellas.
+# Instancias públicas de Overpass. Se consultan en paralelo y se usa la primera
+# que responda correctamente.
 OVERPASS_ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
 ]
+# Overpass puede tardar hasta ~50 s en responder aunque el servicio esté sano.
 OVERPASS_TIMEOUT = 60
-OVERPASS_USER_AGENT = 'VeterinariaModular/1.0 (contacto: ejemplo@test.local)'
+OVERPASS_USER_AGENT = (
+    'VeterinariaModular/1.0 (clinicas veterinarias; contacto: ejemplo@test.local)'
+)
+CACHE_TTL = 600  # 10 minutos
+CACHE = {}
 
 OVERPASS_QUERY = """
 [out:json][timeout:{timeout}];
-(
-  node["amenity"="veterinary"](around:{radio},{lat},{lng});
-  way["amenity"="veterinary"](around:{radio},{lat},{lng});
-  relation["amenity"="veterinary"](around:{radio},{lat},{lng});
-);
+nwr["amenity"="veterinary"](around:{radio},{lat},{lng});
 out center;
-"""
-
-SQL_CLINICAS = """
-    SELECT id, nombre, direccion, telefono, abierto_24_7,
-           ST_Y(coordenadas::geometry) AS lat,
-           ST_X(coordenadas::geometry) AS lng
-    FROM clinicas
-    WHERE abierto_24_7 = TRUE
-    ORDER BY nombre
-"""
-
-SQL_CERCANAS = """
-    SELECT id, nombre, direccion, telefono, abierto_24_7,
-           ST_Y(coordenadas::geometry) AS lat,
-           ST_X(coordenadas::geometry) AS lng,
-           ST_Distance(
-               coordenadas::geography,
-               ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
-           ) AS distancia_m
-    FROM clinicas
-    WHERE abierto_24_7 = TRUE
-      AND ST_DWithin(
-          coordenadas::geography,
-          ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
-          :radio
-      )
-    ORDER BY distancia_m ASC
 """
 
 
@@ -70,29 +45,67 @@ def _distancia_metros(lat1, lng1, lat2, lng2):
     return radio_tierra * c
 
 
-def _consultar_overpass(lat, lng, radio=10000):
-    """Consulta Overpass API para clínicas veterinarias cercanas.
+def _clave_cache(lat, lng, radio):
+    return (round(lat, 3), round(lng, 3), int(radio))
 
-    Prueba varias instancias públicas y usa GET con el parametro data
-    (formato estándar de Overpass). Retorna None si todas fallan.
+
+def _pedir_endpoint(endpoint, consulta):
+    """Consulta una instancia de Overpass por GET y devuelve el JSON.
+
+    Se usa GET porque es el método que mejor funciona con las instancias
+    públicas; algunos mirrors ignoran o retrasan los POST grandes.
     """
-    query = OVERPASS_QUERY.format(
-        timeout=OVERPASS_TIMEOUT, radio=radio, lat=lat, lng=lng
+    url = endpoint + '?data=' + urllib.parse.quote(consulta)
+    peticion = urllib.request.Request(
+        url,
+        headers={
+            'User-Agent': OVERPASS_USER_AGENT,
+            'Accept': 'application/json',
+        },
     )
-    codificado = urllib.parse.quote(query)
+    with urllib.request.urlopen(peticion, timeout=OVERPASS_TIMEOUT) as respuesta:
+        return json.loads(respuesta.read().decode('utf-8'))
 
-    for endpoint in OVERPASS_ENDPOINTS:
-        url = endpoint + '?data=' + codificado
-        req = urllib.request.Request(
-            url,
-            headers={'User-Agent': OVERPASS_USER_AGENT},
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=OVERPASS_TIMEOUT) as resp:
-                return json.loads(resp.read().decode('utf-8'))
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
-            continue
-    return None
+
+def _consultar_overpass(lat, lng, radio=5000):
+    """Consulta Overpass en paralelo y devuelve el primer resultado válido.
+
+    Retorna None si todas las instancias fallan. Los resultados exitosos se
+    guardan en memoria durante CACHE_TTL segundos.
+    """
+    clave = _clave_cache(lat, lng, radio)
+    guardado = CACHE.get(clave)
+    if guardado and time.time() - guardado[0] < CACHE_TTL:
+        return guardado[1]
+
+    consulta = OVERPASS_QUERY.format(
+        timeout=OVERPASS_TIMEOUT, radio=int(radio), lat=lat, lng=lng
+    )
+
+    datos = None
+    pool = ThreadPoolExecutor(max_workers=len(OVERPASS_ENDPOINTS))
+    try:
+        futuros = {
+            pool.submit(_pedir_endpoint, endpoint, consulta)
+            for endpoint in OVERPASS_ENDPOINTS
+        }
+        for futuro in as_completed(futuros, timeout=OVERPASS_TIMEOUT + 5):
+            try:
+                resultado = futuro.result()
+            except (urllib.error.URLError, urllib.error.HTTPError,
+                    OSError, ValueError):
+                continue
+            if isinstance(resultado, dict):
+                datos = resultado
+                break
+    except TimeoutError:
+        pass
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+
+    if datos is not None:
+        CACHE[clave] = (time.time(), datos)
+    return datos
 
 
 def _mapear_elemento_overpass(elemento, lat_ref, lng_ref):
@@ -101,7 +114,7 @@ def _mapear_elemento_overpass(elemento, lat_ref, lng_ref):
     if tipo == 'node':
         el_lat = elemento.get('lat')
         el_lng = elemento.get('lon')
-    elif tipo == 'way':
+    elif tipo in ('way', 'relation'):
         centro = elemento.get('center', {}) or {}
         el_lat = centro.get('lat')
         el_lng = centro.get('lon')
@@ -140,62 +153,9 @@ def mapa():
     return render_template('mapa.html')
 
 
-@mapa_bp.route('/clinicas')
-def clinicas():
-    filas = db.session.execute(text(SQL_CLINICAS)).fetchall()
-    return jsonify([
-        {
-            'id': fila.id,
-            'nombre': fila.nombre,
-            'direccion': fila.direccion,
-            'telefono': fila.telefono,
-            'lat': fila.lat,
-            'lng': fila.lng,
-            'abierto_24_7': fila.abierto_24_7,
-        }
-        for fila in filas
-    ])
-
-
-@mapa_bp.route('/clinicas/cercanas')
-def clinicas_cercanas():
-    try:
-        lat = float(request.args['lat'])
-        lng = float(request.args['lng'])
-    except (KeyError, ValueError):
-        return jsonify({'error': 'Los parámetros lat y lng son obligatorios.'}), 400
-
-    try:
-        radio = float(request.args.get('radio', 5000))
-    except ValueError:
-        return jsonify({'error': 'El radio debe ser un número en metros.'}), 400
-
-    filas = db.session.execute(
-        text(SQL_CERCANAS),
-        {'lat': lat, 'lng': lng, 'radio': radio},
-    ).fetchall()
-
-    return jsonify([
-        {
-            'id': fila.id,
-            'nombre': fila.nombre,
-            'direccion': fila.direccion,
-            'telefono': fila.telefono,
-            'lat': fila.lat,
-            'lng': fila.lng,
-            'distancia_m': round(float(fila.distancia_m), 1),
-            'abierto_24_7': fila.abierto_24_7,
-        }
-        for fila in filas
-    ])
-
-
 @mapa_bp.route('/clinicas/reales')
 def clinicas_reales():
-    """Clínicas veterinarias reales cercanas usando Overpass API (OpenStreetMap).
-
-    Si Overpass no responde, hace fallback a las clínicas de la base local.
-    """
+    """Clínicas veterinarias reales cercanas usando Overpass API (OpenStreetMap)."""
     try:
         lat = float(request.args['lat'])
         lng = float(request.args['lng'])
@@ -207,39 +167,23 @@ def clinicas_reales():
     except ValueError:
         return jsonify({'error': 'El radio debe ser un número en metros.'}), 400
 
+    if radio <= 0 or radio > 50_000:
+        return jsonify({'error': 'El radio debe estar entre 1 y 50000 metros.'}), 400
+
     datos = _consultar_overpass(lat, lng, radio)
-
-    # Si Overpass no responde O devuelve 0 elementos, usar BD local como fallback.
-    elementos = datos.get('elements', []) if datos else []
-
-    if not elementos:
-        filas = db.session.execute(
-            text(SQL_CERCANAS),
-            {'lat': lat, 'lng': lng, 'radio': radio},
-        ).fetchall()
+    if datos is None:
         return jsonify({
-            'fuente': 'local',
-            'clinicas': [
-                {
-                    'id': fila.id,
-                    'nombre': fila.nombre,
-                    'direccion': fila.direccion,
-                    'telefono': fila.telefono,
-                    'lat': fila.lat,
-                    'lng': fila.lng,
-                    'distancia_m': round(float(fila.distancia_m), 1),
-                    'abierto_24_7': fila.abierto_24_7,
-                    'fuente': 'local',
-                }
-                for fila in filas
-            ],
-        })
+            'error': ('No se pudieron obtener clínicas reales en este momento. '
+                      'Overpass puede estar saturado; intenta de nuevo en unos segundos.'),
+            'fuente': 'overpass',
+            'clinicas': [],
+        }), 503
 
     clinicas = []
-    for elemento in elementos:
+    for elemento in datos.get('elements', []):
         mapeado = _mapear_elemento_overpass(elemento, lat, lng)
         if mapeado is not None:
             clinicas.append(mapeado)
 
-    clinicas.sort(key=lambda c: c['distancia_m'])
+    clinicas.sort(key=lambda clinica: clinica['distancia_m'])
     return jsonify({'fuente': 'overpass', 'clinicas': clinicas})

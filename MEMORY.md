@@ -1,13 +1,13 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-11-10 (Fase 4 — bandeja de solicitudes y mensajes solo de casos tomados)
+> Última actualización: 2026-11-10 (Fase 4 — mapa solo con clínicas reales de Overpass)
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
 - Rama activa: `feature/fase4-frontend` (Fase 4 completada).
 - MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas.
-- Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado, chat) y mapa (Leaflet + PostGIS).
-- Mapa completado: clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática, marcador de usuario, toggle real/local, fallback a BD local, radio 2/5/10/20 km (default 5 km).
+- Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado, chat) y mapa (Leaflet + Overpass).
+- Mapa completado: solo clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática, marcador de usuario, radio 2/5/10/20 km (default 5 km). Sin selector de origen ni fallback a BD local.
 - Registro separado completado: `/registro` (landing), `/registro/dueno`, `/registro/veterinario` (cédula obligatoria).
 - Vista veterinario tipo Uber completada: `/veterinario/consultas-disponibles`, tomar consulta, `/veterinario/mis-consultas`.
 - Bandeja de veterinario = cola de **solicitudes por tomar** (solo `Pendiente` sin veterinario). Al tomar un caso desaparece de la bandeja y pasa a Tablero/Agenda; cerrados y en revisión no aparecen. Menú renombrado a "Solicitudes" con badge de casos disponibles.
@@ -27,13 +27,13 @@
 
 ## Decisiones (y por qué)
 - Overpass API (OpenStreetMap) sin clave de API; gratis y sin registro.
-- Endpoint `GET /clinicas/reales?lat=&lng=&radio=` consulta `amenity=veterinary` y hace fallback a BD local si Overpass no responde o devuelve 0 elementos. Default de radio: 5000 m.
-- Consulta Overpass via GET con parametro `data` + header User-Agent. Múltiples instancias con retry.
+- Endpoint único `GET /clinicas/reales?lat=&lng=&radio=` con consulta `nwr["amenity"="veterinary"](around:...)`. Si Overpass falla devuelve 503 con lista vacía; **nunca** consulta la BD local. Default de radio: 5000 m.
+- Consulta Overpass por GET con parámetro `data` + header User-Agent, timeout 60 s, varias instancias en paralelo (se usa la primera que responda) y caché en memoria de 10 min por lat/lng redondeadas + radio. Se soportan node/way/relation vía `out center`.
 - `urllib.request` de stdlib para no añadir dependencias.
 - `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
 
 ## Aprendizajes y errores a evitar
-- Overpass puede estar lento, no responder o rechazar peticiones sin User-Agent; siempre tener fallback a BD local.
+- Overpass puede estar lento (30-50 s), devolver 502 o no responder; por eso hay mirror en paralelo, timeout amplio y caché. No reintroducir el fallback a BD local: mostraría datos que no son clínicas reales y ocultaría el fallo.
 - No añadir claves de API al repo.
 - Los tests generales desactivan CSRF; el test dedicado usa `client_csrf`.
 - Jinja2: verificar `{% block %}`/`{% endblock %}` balanceados y evitar `{% endif }` con espacio.
@@ -44,6 +44,6 @@
 - Opcional: CI con PostgreSQL/PostGIS.
 
 ## Tests
-- `tests/test_smoke.py`: 13 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja + 3 tests de mensajes + 8 tests de la API de chat (envío/lectura, vet sin tomar, bidireccional, cerrada, sin solicitar, sin sesión, CSRF, wiring de plantillas).
+- `tests/test_smoke.py`: 12 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja + 3 tests de mensajes + 8 tests de la API de chat + 4 tests del mapa real (mapeo node/way/relation, sin fallback local, validación de parámetros, caché).
 - `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
-- Total: 87 passed, 0 failed.
+- Total: 90 passed, 0 failed.

@@ -247,10 +247,61 @@ def test_borrado_en_cascada(client):
         assert Evidencia.query.filter_by(consulta_id=consulta_id).count() == 0
 
 
-def test_mapa_devuelve_clinicas(client):
+def test_clinicas_reales_mapea_overpass(client, monkeypatch):
+    from routes import mapa as mapa_module
+
+    def fake_overpass(lat, lng, radio=5000):
+        return {'elements': [
+            {
+                'type': 'node', 'id': 1, 'lat': 20.6767, 'lon': -103.3475,
+                'tags': {
+                    'name': 'Vet Cerca',
+                    'addr:street': 'Av. Demo',
+                    'addr:housenumber': '123',
+                    'phone': '3312345678',
+                },
+            },
+            {
+                'type': 'way', 'id': 2,
+                'center': {'lat': 20.7000, 'lon': -103.4000},
+                'tags': {'name': 'Vet Lejos'},
+            },
+            {
+                'type': 'relation', 'id': 3,
+                'center': {'lat': 20.6800, 'lon': -103.3500},
+                'tags': {'name': 'Vet Relación'},
+            },
+            {
+                'type': 'node', 'id': 4, 'lat': 20.6900, 'lon': -103.3600,
+                'tags': {},
+            },
+            {'type': 'way', 'id': 5, 'tags': {'name': 'Sin centro'}},
+        ]}
+
+    monkeypatch.setattr(mapa_module, '_consultar_overpass', fake_overpass)
+
+    respuesta = client.get('/clinicas/reales?lat=20.6767&lng=-103.3475&radio=5000')
+    assert respuesta.status_code == 200
+    datos = respuesta.get_json()
+    assert datos['fuente'] == 'overpass'
+    assert len(datos['clinicas']) == 4
+    assert datos['clinicas'][0]['nombre'] == 'Vet Cerca'
+    assert datos['clinicas'][0]['distancia_m'] < 10
+    assert datos['clinicas'][0]['direccion'] == 'Av. Demo 123'
+    assert datos['clinicas'][0]['telefono'] == '3312345678'
+
+    ids = {clinica['id'] for clinica in datos['clinicas']}
+    assert 'overpass-relation-3' in ids
+    assert 'overpass-way-5' not in ids
+
+    distancias = [clinica['distancia_m'] for clinica in datos['clinicas']]
+    assert distancias == sorted(distancias)
+
+
+def test_clinicas_reales_no_usa_base_local(client, monkeypatch):
     with app.app_context():
         db.session.add(Clinica(
-            nombre='Clínica Demo',
+            nombre='Clínica Local Demo',
             direccion='Av. Demo 123',
             telefono='3312345678',
             coordenadas=WKTElement('POINT(-103.3475 20.6767)', srid=4326),
@@ -258,16 +309,48 @@ def test_mapa_devuelve_clinicas(client):
         ))
         db.session.commit()
 
-    respuesta = client.get('/clinicas')
-    assert respuesta.status_code == 200
-    datos = respuesta.get_json()
-    assert len(datos) == 1
-    assert datos[0]['nombre'] == 'Clínica Demo'
+    from routes import mapa as mapa_module
+    monkeypatch.setattr(mapa_module, '_consultar_overpass', lambda *a, **k: None)
 
-    cercanas = client.get('/clinicas/cercanas?lat=20.6767&lng=-103.3475&radio=1000')
-    assert cercanas.status_code == 200
-    assert len(cercanas.get_json()) == 1
-    assert cercanas.get_json()[0]['distancia_m'] < 10
+    respuesta = client.get('/clinicas/reales?lat=20.6767&lng=-103.3475&radio=5000')
+    assert respuesta.status_code == 503
+    datos = respuesta.get_json()
+    assert datos['fuente'] == 'overpass'
+    assert datos['clinicas'] == []
+    assert 'Overpass' in datos['error']
+
+
+def test_clinicas_reales_valida_parametros(client):
+    assert client.get('/clinicas/reales').status_code == 400
+    assert client.get(
+        '/clinicas/reales?lat=20.6&lng=-103.3&radio=abc'
+    ).status_code == 400
+    assert client.get(
+        '/clinicas/reales?lat=20.6&lng=-103.3&radio=0'
+    ).status_code == 400
+
+
+def test_consultar_overpass_usa_cache(monkeypatch):
+    from routes import mapa as mapa_module
+
+    mapa_module.CACHE.clear()
+    monkeypatch.setattr(mapa_module, 'OVERPASS_ENDPOINTS', ['https://overpass.test'])
+    llamadas = []
+
+    def fake_pedir(endpoint, cuerpo):
+        llamadas.append(endpoint)
+        return {'elements': [
+            {'type': 'node', 'id': 1, 'lat': 20.0, 'lon': -103.0, 'tags': {}},
+        ]}
+
+    monkeypatch.setattr(mapa_module, '_pedir_endpoint', fake_pedir)
+
+    primero = mapa_module._consultar_overpass(20.0, -103.0, 5000)
+    segundo = mapa_module._consultar_overpass(20.0, -103.0, 5000)
+
+    assert primero == segundo
+    assert len(llamadas) == 1
+    mapa_module.CACHE.clear()
 
 
 def test_guias_de_primeros_auxilios():
