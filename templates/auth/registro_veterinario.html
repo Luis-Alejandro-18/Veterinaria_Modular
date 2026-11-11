@@ -42,6 +42,6 @@
     </div>
   </form>
 
-  <p class="hint">¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}">Inicia sesión</a>.</p>
+  <p class="hint">¿Ya tienes cuenta? <a href="{{ url_for('auth.login', perfil='veterinario') }}">Inicia sesión en el panel veterinario</a>.</p>
 </div>
 {% endblock %}

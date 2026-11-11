@@ -1,0 +1,55 @@
+{% extends 'veterinario/base_vet.html' %}
+{% from 'veterinario/_macros.html' import urgencia_class, evidencia_texto %}
+
+{% block title %}Tablero por estado — Panel veterinario{% endblock %}
+
+{% block content %}
+<div class="vet-head">
+  <div>
+    <h1>Tablero por estado</h1>
+    <p>Así avanza cada caso, desde que llega hasta que se resuelve con el dueño.</p>
+  </div>
+  <div class="vet-head-actions">
+    <a class="btn ghost" href="{{ url_for('veterinario.bandeja') }}">
+      <svg class="i" aria-hidden="true"><use href="#inbox"/></svg>
+      Ver como lista
+    </a>
+  </div>
+</div>
+
+{% set meta = {
+  'Pendiente': ('Nuevos', 'Sin revisar', 'Aquí aparecen los reportes que todavía no tienen veterinario.'),
+  'En Atención': ('En revisión', 'Esperan diagnóstico', 'Casos que ya estás atendiendo y necesitan respuesta.'),
+  'Requiere Presencial': ('Requiere presencial', 'Derivados a clínica', 'Casos que necesitan valoración en consultorio.'),
+  'Cerrada': ('Cerrados', 'Resueltos con el dueño', 'Aquí aparecen los casos que ya se resolvieron con el dueño.')
+} %}
+
+<div class="vet-board">
+  {% for estado in ['Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada'] %}
+  <section class="vet-col" aria-label="{{ meta[estado][0] }}">
+    <div class="vet-col-head">
+      <h3>{{ meta[estado][0] }}</h3>
+      <span class="vet-count">{{ columnas[estado]|length }}</span>
+    </div>
+    <p class="vet-col-sub">{{ meta[estado][1] }}</p>
+
+    {% for consulta in columnas[estado] %}
+      <a class="vet-kc {% if consulta.nivel_urgencia == 'Urgente' and consulta.estado != 'Cerrada' %}u{% endif %}"
+         href="{{ url_for('veterinario.caso', consulta_id=consulta.id) }}">
+        <div class="vet-kc-top">
+          <b>{{ consulta.mascota.nombre }} · {{ consulta.mascota.especie }}</b>
+          <small>#{{ consulta.id }}</small>
+        </div>
+        <p>{{ consulta.sintomas|truncate(96, True) }}</p>
+        <div class="vet-kc-meta">
+          <span class="vet-pill {{ urgencia_class(consulta.nivel_urgencia) }}">{{ consulta.nivel_urgencia }}</span>
+          <span>{{ evidencia_texto(consulta.evidencias|length) }} · {{ consulta.fecha_creacion|local_time('%d/%m %H:%M') }}</span>
+        </div>
+      </a>
+    {% else %}
+      <div class="vet-col-empty">{{ meta[estado][2] }}</div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

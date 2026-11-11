@@ -31,5 +31,6 @@
   </form>
 
   <p class="hint">¿No tienes cuenta? <a href="{{ url_for('auth.registro') }}">Regístrate</a>.</p>
+  <p class="hint">¿Eres veterinario? <a href="{{ url_for('auth.login', perfil='veterinario') }}">Accede al panel veterinario</a>.</p>
 </div>
 {% endblock %}

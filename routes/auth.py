@@ -85,6 +85,8 @@ def registro_veterinario():
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    perfil = request.form.get('perfil', '') if request.method == 'POST' else request.args.get('perfil', '')
+
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -92,13 +94,28 @@ def login():
 
         if usuario is None or not check_password_hash(usuario.password_hash, password):
             flash('Credenciales incorrectas.', 'error')
+            if perfil == 'veterinario':
+                return redirect(url_for('auth.login', perfil='veterinario'))
             return redirect(url_for('auth.login'))
+
+        if perfil == 'veterinario' and usuario.rol != 'veterinario':
+            flash('Ese acceso es exclusivo para veterinarios.', 'error')
+            return redirect(url_for('auth.login', perfil='veterinario'))
 
         session.clear()
         session['usuario_id'] = usuario.id
+        session.permanent = (
+            perfil == 'veterinario'
+            and request.form.get('mantener_sesion') == 'on'
+        )
         flash(f'Bienvenido, {usuario.nombre}.', 'success')
+
+        if usuario.rol == 'veterinario':
+            return redirect(url_for('veterinario.bandeja'))
         return redirect(url_for('main.dashboard'))
 
+    if perfil == 'veterinario':
+        return render_template('auth/login_veterinario.html')
     return render_template('auth/login.html')
 
 

@@ -1,0 +1,267 @@
+{% extends 'veterinario/base_vet.html' %}
+{% from 'veterinario/_macros.html' import estado_class, urgencia_class, edad %}
+
+{% block title %}Caso #{{ consulta.id }} — Panel veterinario{% endblock %}
+
+{% block content %}
+<div class="vet-head">
+  <div>
+    <a class="vet-back" href="{{ url_for('veterinario.bandeja') }}">
+      <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+      Bandeja de casos
+    </a>
+    <div class="vet-title-row">
+      <h1>Caso #{{ consulta.id }}</h1>
+      <span class="vet-pill {{ estado_class(consulta.estado) }}">{{ consulta.estado }}</span>
+      <span class="vet-pill {{ urgencia_class(consulta.nivel_urgencia) }}">{{ consulta.nivel_urgencia }}</span>
+    </div>
+  </div>
+  <div class="vet-head-actions">
+    {% if puede_tomar %}
+      <form method="post" action="{{ url_for('veterinario.tomar_consulta', consulta_id=consulta.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn">
+          <svg class="i" aria-hidden="true"><use href="#check"/></svg>
+          Tomar caso
+        </button>
+      </form>
+    {% elif es_mio %}
+      <a class="btn ghost" href="{{ url_for('veterinario.chat', consulta_id=consulta.id) }}">
+        <svg class="i" aria-hidden="true"><use href="#message"/></svg>
+        Chat con el dueño
+        {% if mensajes_no_leidos %}<span class="vet-unread">{{ mensajes_no_leidos }}</span>{% endif %}
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if puede_tomar %}
+<div class="vet-alert">Este caso aún no tiene veterinario asignado. Tómalo para responder al dueño.</div>
+{% elif not es_mio %}
+<div class="vet-alert vet-alert-danger">Este caso está asignado a otro veterinario. Puedes consultar la información, pero no responder.</div>
+{% endif %}
+
+<div class="vet-case-grid">
+  <div class="vet-case-col">
+    <section class="vet-case-card">
+      <h2>Lo que reportó el dueño</h2>
+      <p class="vet-report">{{ consulta.sintomas }}</p>
+
+      <div>
+        <span class="vet-label">Evidencia adjunta ({{ consulta.evidencias|length }})</span>
+        {% if consulta.evidencias %}
+        <div class="vet-evidence">
+          {% for evidencia in consulta.evidencias %}
+            {% if evidencia.tipo == 'imagen' %}
+              <a class="vet-thumb" href="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}"
+                 target="_blank" rel="noopener" title="Abrir evidencia">
+                <img src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}"
+                     alt="Evidencia de {{ consulta.mascota.nombre }}">
+              </a>
+            {% else %}
+              <div class="vet-thumb">
+                <video src="{{ url_for('triaje.ver_evidencia', evidencia_id=evidencia.id) }}"
+                       controls preload="metadata"></video>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% if not puede_tomar %}
+          <a class="vet-request-photos" href="{{ url_for('veterinario.chat', consulta_id=consulta.id) }}">
+            Pedir más fotos al dueño
+          </a>
+          {% endif %}
+        </div>
+        {% else %}
+          <p class="hint">Sin evidencia adjunta.</p>
+          {% if not puede_tomar %}
+          <a class="vet-request-photos" href="{{ url_for('veterinario.chat', consulta_id=consulta.id) }}">
+            Pedir fotos al dueño
+          </a>
+          {% endif %}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="vet-case-card">
+      <h2>Datos de la mascota</h2>
+      <div class="vet-kv-grid">
+        <div class="vet-kv"><span>Nombre</span><b>{{ consulta.mascota.nombre }}</b></div>
+        <div class="vet-kv"><span>Tipo</span><b>{{ consulta.mascota.especie }}</b></div>
+        <div class="vet-kv"><span>Raza</span><b>{{ consulta.mascota.raza or 'No indicada' }}</b></div>
+        <div class="vet-kv"><span>Edad</span><b>{{ edad(consulta.mascota) }}</b></div>
+        <div class="vet-kv"><span>Peso</span><b>{% if consulta.mascota.peso_kg is not none %}{{ consulta.mascota.peso_kg }} kg{% else %}No indicado{% endif %}</b></div>
+        <div class="vet-kv"><span>Recibido</span><b>{{ consulta.fecha_creacion|local_time('%d/%m/%Y – %H:%M') }}</b></div>
+      </div>
+      {% if consulta.mascota.condiciones_previas %}
+      <div>
+        <span class="vet-label">Condiciones previas</span>
+        <p class="vet-report">{{ consulta.mascota.condiciones_previas }}</p>
+      </div>
+      {% endif %}
+      <div class="vet-kv-grid vet-kv-divider">
+        <div class="vet-kv"><span>Dueño</span><b>{{ consulta.mascota.dueno.nombre }}</b></div>
+        <div class="vet-kv"><span>Contacto</span><b>{{ consulta.mascota.dueno.email }}</b></div>
+      </div>
+    </section>
+
+    <section class="vet-case-card">
+      <h2>Historial</h2>
+      <ul class="vet-timeline">
+        <li>
+          <span class="vet-timeline-dot"></span>
+          <div>
+            <b>{{ consulta.fecha_creacion|local_time }}</b>
+            <p>Caso recibido correctamente.</p>
+          </div>
+        </li>
+        {% if consulta.veterinario %}
+        <li>
+          <span class="vet-timeline-dot"></span>
+          <div>
+            <b>Veterinario asignado</b>
+            <p>{{ consulta.veterinario.nombre }}</p>
+          </div>
+        </li>
+        {% endif %}
+        {% for respuesta in respuestas %}
+        <li>
+          <span class="vet-timeline-dot"></span>
+          <div>
+            <b>{{ respuesta.fecha_respuesta|local_time }}</b>
+            <p>Respuesta enviada al dueño.</p>
+          </div>
+        </li>
+        {% endfor %}
+        {% if consulta.estado != 'Cerrada' %}
+        <li>
+          <span class="vet-timeline-dot o"></span>
+          <div>
+            <b>Pendiente</b>
+            <p>Seguimiento y actualización del caso.</p>
+          </div>
+        </li>
+        {% endif %}
+      </ul>
+    </section>
+
+    <section class="vet-case-card">
+      <h2>Respuestas enviadas</h2>
+      {% if respuestas %}
+      <div class="vet-responses">
+        {% for respuesta in respuestas %}
+        <div class="vet-response">
+          <p>{{ respuesta.mensaje }}</p>
+          <small>
+            {{ respuesta.fecha_respuesta|local_time }} —
+            {{ respuesta.veterinario.nombre if respuesta.veterinario else 'Veterinario' }}
+          </small>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="hint">Aún no se ha enviado un diagnóstico al dueño.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="vet-case-col">
+    <section class="vet-case-card">
+      <h2>Diagnóstico y respuesta</h2>
+
+      {% if consulta.estado == 'Cerrada' %}
+        <div class="vet-note">
+          Este caso está cerrado. No se pueden enviar más respuestas ni cambiar el estado.
+        </div>
+      {% elif puede_tomar %}
+        <p class="hint">Toma el caso para enviar el diagnóstico y las recomendaciones al dueño.</p>
+        <form method="post" action="{{ url_for('veterinario.tomar_consulta', consulta_id=consulta.id) }}" class="vet-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn wide">
+            <svg class="i" aria-hidden="true"><use href="#check"/></svg>
+            Tomar caso
+          </button>
+        </form>
+      {% elif not es_mio %}
+        <div class="vet-alert vet-alert-danger">
+          Solo el veterinario asignado puede enviar el diagnóstico de este caso.
+        </div>
+      {% else %}
+        <p class="hint">El dueño verá este texto en el seguimiento de su consulta.</p>
+        <form method="post" action="{{ url_for('veterinario.responder', consulta_id=consulta.id) }}" class="vet-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          {% if estados_disponibles %}
+          <div class="field">
+            <label class="vet-label" for="estado">Estado del caso</label>
+            <select id="estado" name="estado" class="in">
+              <option value="">Mantener estado actual ({{ consulta.estado }})</option>
+              {% for estado in estados_disponibles %}
+                <option value="{{ estado }}">{{ estado }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          <div class="field">
+            <label class="vet-label" for="diagnostico">Diagnóstico preliminar</label>
+            <textarea id="diagnostico" name="diagnostico" class="in" rows="3"
+                      placeholder="Describe el cuadro compatible y lo que se necesita confirmar."></textarea>
+          </div>
+
+          <div class="field">
+            <label class="vet-label" for="recomendaciones">Recomendaciones para el dueño</label>
+            <textarea id="recomendaciones" name="recomendaciones" class="in" rows="4"
+                      placeholder="Reposo, vigilancia de síntomas, señales de alarma…"></textarea>
+          </div>
+
+          <label class="vet-check">
+            <input type="checkbox" name="requiere_presencial">
+            Recomendar consulta presencial
+          </label>
+
+          <div class="vet-form-actions">
+            <button type="submit" class="btn">
+              <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+              Enviar al dueño
+            </button>
+            <a class="btn ghost" href="{{ url_for('veterinario.chat', consulta_id=consulta.id) }}">
+              <svg class="i" aria-hidden="true"><use href="#message"/></svg>
+              Abrir chat
+            </a>
+          </div>
+        </form>
+
+        {% if estados_disponibles %}
+        <form method="post" action="{{ url_for('veterinario.cambiar_estado', consulta_id=consulta.id) }}" class="vet-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="field">
+            <label class="vet-label" for="estado-rapido">Cambiar solo el estado</label>
+            <select id="estado-rapido" name="estado" class="in">
+              {% for estado in estados_disponibles %}
+                <option value="{{ estado }}">{{ estado }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn ghost wide">Actualizar estado</button>
+        </form>
+        {% endif %}
+      {% endif %}
+    </section>
+
+    <section class="vet-case-card">
+      <h2>Seguimiento</h2>
+      <div class="vet-mini-list">
+        <div class="vet-mini-item"><span>Mensajes con el dueño</span><b>{{ total_mensajes }}</b></div>
+        <div class="vet-mini-item"><span>Mensajes sin leer</span><b>{{ mensajes_no_leidos }}</b></div>
+        <div class="vet-mini-item"><span>Evidencias</span><b>{{ consulta.evidencias|length }}</b></div>
+      </div>
+      {% if es_mio %}
+      <a class="btn ghost wide" href="{{ url_for('veterinario.chat', consulta_id=consulta.id) }}">
+        <svg class="i" aria-hidden="true"><use href="#message"/></svg>
+        Ver conversación
+      </a>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

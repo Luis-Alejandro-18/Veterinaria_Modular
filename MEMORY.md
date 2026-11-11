@@ -9,7 +9,7 @@
 - Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado, chat) y mapa (Leaflet + Overpass).
 - Mapa completado: solo clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática, marcador de usuario, radio 2/5/10/20 km (default 5 km). Sin selector de origen ni fallback a BD local.
 - Registro separado completado: `/registro` (landing), `/registro/dueno`, `/registro/veterinario` (cédula obligatoria).
-- Vista veterinario tipo Uber completada: `/veterinario/consultas-disponibles`, tomar consulta, `/veterinario/mis-consultas`.
+- Vista veterinario tipo Uber completada: `/veterinario/login` (acceso propio con `?perfil=veterinario`), `/veterinario/bandeja`, `/veterinario/tablero`, `/veterinario/agenda`, `/veterinario/casos/<id>` (tomar, responder, cambiar estado y chat).
 - Bandeja de veterinario = cola de **solicitudes por tomar** (solo `Pendiente` sin veterinario). Al tomar un caso desaparece de la bandeja y pasa a Tablero/Agenda; cerrados y en revisión no aparecen. Menú renombrado a "Solicitudes" con badge de casos disponibles.
 - Sección **Mensajes** (antes "Mensajes a dueños"): solo muestra conversaciones de casos ya tomados por el veterinario (incluye cerrados como historial). El badge de no leídos cuenta solo esos casos. En Solicitudes, un contador marca los mensajes previos del dueño antes de tomar el caso.
 - Chat bidireccional sin recargas: API JSON `/api/consultas/<id>/mensajes` (GET/POST) y `/leido`, con polling cada 2.5 s (`static/js/chat.js`). Envío optimista, auto-scroll, Enter para enviar, pausa al ocultar la pestaña y CSRF por header `X-CSRFToken`. Sin dependencias nuevas.
@@ -39,7 +39,7 @@
 - Jinja2: verificar `{% block %}`/`{% endblock %}` balanceados y evitar `{% endif }` con espacio.
 
 ## Próximos pasos
-- Navegación por rol: navbar condicional en base.html; veterinarios ven Consultas disponibles y Mis consultas (sin Clínicas, Mis mascotas, Triaje).
+- Navegación por rol: navbar condicional en base.html; veterinarios ven Solicitudes, Tablero y Mensajes (sin Clínicas, Mis mascotas, Triaje).
 - Opcional: historial de estados, cierre con motivo, notificaciones, prioridad manual, calificación, estadísticas.
 - Opcional: CI con PostgreSQL/PostGIS.
 

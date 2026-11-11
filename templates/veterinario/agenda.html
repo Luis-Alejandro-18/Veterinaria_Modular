@@ -1,0 +1,121 @@
+{% extends 'veterinario/base_vet.html' %}
+{% from 'veterinario/_macros.html' import estado_class, urgencia_class %}
+
+{% block title %}Agenda de seguimiento — Panel veterinario{% endblock %}
+
+{% block content %}
+<div class="vet-head">
+  <div>
+    <h1>Agenda de seguimiento</h1>
+    <p>Casos activos que tienes asignados, ordenados por prioridad y fecha de ingreso.</p>
+  </div>
+  <div class="vet-head-actions">
+    <a class="btn ghost" href="{{ url_for('veterinario.tablero') }}">
+      <svg class="i" aria-hidden="true"><use href="#board"/></svg>
+      Ver tablero
+    </a>
+  </div>
+</div>
+
+<div class="vet-stats">
+  <div class="vet-stat vet-stat-new">
+    <span class="vet-stat-label">Casos activos</span>
+    <b>{{ total_activas }}</b>
+    <small>en seguimiento</small>
+  </div>
+  <div class="vet-stat vet-stat-urg">
+    <span class="vet-stat-label">Prioritarios</span>
+    <b>{{ prioritarias|length }}</b>
+    <small>urgentes o presenciales</small>
+  </div>
+  <div class="vet-stat vet-stat-dx">
+    <span class="vet-stat-label">Cerrados</span>
+    <b>{{ cerradas|length }}</b>
+    <small>recientes</small>
+  </div>
+</div>
+
+<div class="vet-agenda-grid">
+  <div>
+    {% if dias %}
+      {% for dia in dias %}
+      <section class="vet-day" aria-label="{{ dia.etiqueta }}">
+        <div class="vet-day-head">
+          <h2>{{ dia.etiqueta }}</h2>
+          <small>{{ dia.consultas|length }} caso{% if dia.consultas|length != 1 %}s{% endif %}</small>
+        </div>
+        <ul class="vet-events">
+          {% for consulta in dia.consultas %}
+          <li>
+            <a class="vet-event {% if consulta.nivel_urgencia == 'Urgente' or consulta.estado == 'Requiere Presencial' %}priority{% endif %}"
+               href="{{ url_for('veterinario.caso', consulta_id=consulta.id) }}">
+              <span class="vet-event-time">
+                {{ consulta.fecha_creacion|local_time('%H:%M') }}
+                <small>#{{ consulta.id }}</small>
+              </span>
+              <span class="vet-event-body">
+                <b>{{ consulta.mascota.nombre }} · {{ consulta.mascota.especie }}</b>
+                <p>{{ consulta.sintomas|truncate(110, True) }}</p>
+              </span>
+              <span class="vet-pill {{ estado_class(consulta.estado) }}">{{ consulta.estado }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endfor %}
+    {% else %}
+      <div class="vet-empty">
+        <p>No tienes casos activos. Toma un caso desde la bandeja para darle seguimiento.</p>
+        <a class="btn" href="{{ url_for('veterinario.bandeja') }}">Ir a la bandeja</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="vet-case-col">
+    <section class="vet-case-card">
+      <div class="vet-section-title">
+        <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+        <h2>Seguimiento prioritario</h2>
+      </div>
+      {% if prioritarias %}
+      <ul class="vet-mini-list">
+        {% for consulta in prioritarias %}
+        <li class="vet-mini-item">
+          <span>
+            <a href="{{ url_for('veterinario.caso', consulta_id=consulta.id) }}">{{ consulta.mascota.nombre }}</a>
+            <br><small class="hint">{{ consulta.estado }}</small>
+          </span>
+          <span class="vet-pill {{ urgencia_class(consulta.nivel_urgencia) }}">{{ consulta.nivel_urgencia }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="vet-note">No hay casos urgentes ni derivados a consulta presencial pendientes.</div>
+      {% endif %}
+    </section>
+
+    <section class="vet-case-card">
+      <div class="vet-section-title">
+        <svg class="i" aria-hidden="true"><use href="#check"/></svg>
+        <h2>Cerrados recientemente</h2>
+      </div>
+      {% if cerradas %}
+      <ul class="vet-mini-list">
+        {% for consulta in cerradas %}
+        <li class="vet-mini-item">
+          <span>
+            <a href="{{ url_for('veterinario.caso', consulta_id=consulta.id) }}">{{ consulta.mascota.nombre }}</a>
+            <br><small class="hint">{{ consulta.fecha_creacion|local_time('%d/%m/%Y') }}</small>
+          </span>
+          <span class="vet-pill {{ estado_class(consulta.estado) }}">{{ consulta.estado }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="vet-note">Todavía no has cerrado casos.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

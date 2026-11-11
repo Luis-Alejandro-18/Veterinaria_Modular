@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, g
+from flask import Blueprint, g, redirect, render_template, url_for
 
 from models import Mascota, Consulta
 from routes.utils import login_required
@@ -10,6 +10,9 @@ main_bp = Blueprint('main', __name__)
 @login_required
 def dashboard():
     """Panel de resumen para el usuario autenticado."""
+    if g.usuario.rol == 'veterinario':
+        return redirect(url_for('veterinario.bandeja'))
+
     mascotas_count = (Mascota.query
                       .filter_by(usuario_id=g.usuario.id)
                       .count())
