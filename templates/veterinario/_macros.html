@@ -1,0 +1,4 @@
+{% macro estado_class(estado) %}{% if estado == 'Pendiente' %}vet-pill-new{% elif estado == 'En Atención' %}vet-pill-rev{% elif estado == 'Requiere Presencial' %}vet-pill-spe{% else %}vet-pill-dx{% endif %}{% endmacro %}
+{% macro urgencia_class(nivel) %}{% if nivel == 'Urgente' %}vet-pill-urg{% elif nivel == 'Moderado' %}vet-pill-mod{% else %}vet-pill-leve{% endif %}{% endmacro %}
+{% macro edad(mascota) %}{% if mascota.edad_anios is not none %}{{ mascota.edad_anios }} año{% if mascota.edad_anios != 1 %}s{% endif %}{% else %}Edad no indicada{% endif %}{% endmacro %}
+{% macro evidencia_texto(total) %}{% if total %}{{ total }} foto{% if total != 1 %}s{% endif %}{% else %}Sin fotos{% endif %}{% endmacro %}

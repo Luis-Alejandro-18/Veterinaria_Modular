@@ -21,6 +21,14 @@ def _to_float(value):
         return None
 
 
+@mascotas_bp.before_request
+def _redirect_veterinarios():
+    """Redirige a veterinarios de la sección de mascotas (solo para dueños)."""
+    if g.usuario and g.usuario.rol == 'veterinario':
+        flash('Esta sección es solo para dueños de mascotas.', 'error')
+        return redirect(url_for('veterinario.bandeja'))
+
+
 @mascotas_bp.route('/')
 @login_required
 def lista():
@@ -54,12 +62,20 @@ def lista():
 @mascotas_bp.route('/nueva', methods=['GET', 'POST'])
 @login_required
 def nueva():
+    # Parámetro para continuar tras crear la mascota (solo acepta 'triaje',
+    # cualquier otro valor se ignora para evitar open redirect).
+    next_param = request.args.get('next') or request.form.get('next')
+    next_url = 'triaje' if next_param == 'triaje' else None
+    mostrar_aviso_triaje = (next_url == 'triaje')
+
     if request.method == 'POST':
         nombre = request.form.get('nombre', '').strip()
         especie = request.form.get('especie', '').strip()
+        next_param = request.form.get('next') or request.args.get('next')
+        next_url = 'triaje' if next_param == 'triaje' else None
         if not nombre or not especie:
             flash('Nombre y especie son obligatorios.', 'error')
-            return redirect(url_for('mascotas.nueva'))
+            return redirect(url_for('mascotas.nueva', next=next_url))
 
         mascota = Mascota(
             usuario_id=g.usuario.id,
@@ -73,9 +89,15 @@ def nueva():
         db.session.add(mascota)
         db.session.commit()
         flash('Mascota registrada correctamente.', 'success')
+
+        # Si venía del triaje, vuelve al triaje con la mascota ya seleccionada.
+        if next_url == 'triaje':
+            return redirect(url_for('triaje.nueva', mascota_id=mascota.id))
         return redirect(url_for('mascotas.lista'))
 
-    return render_template('mascotas/form.html', mascota=None)
+    return render_template('mascotas/form.html', mascota=None,
+                           next=next_url,
+                           mostrar_aviso_triaje=mostrar_aviso_triaje)
 
 
 @mascotas_bp.route('/<int:mascota_id>')

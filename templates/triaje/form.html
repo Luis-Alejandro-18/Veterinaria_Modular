@@ -1,35 +1,223 @@
 {% extends 'base.html' %}
 
-{% block title %}Nuevo triaje — Veterinaria Modular{% endblock %}
+{% block title %}Triaje Virtual — Vet en un Click{% endblock %}
 
 {% block content %}
-<h1>Nuevo triaje</h1>
-
-{% if mascotas %}
-<form method="post" class="form">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <label>Mascota
-    <select name="mascota_id" required>
-      <option value="">Selecciona una mascota</option>
-      {% for mascota in mascotas %}
-        <option value="{{ mascota.id }}">{{ mascota.nombre }} ({{ mascota.especie }})</option>
-      {% endfor %}
-    </select>
-  </label>
-
-  <label>Describe los síntomas
-    <textarea name="sintomas" rows="5" required placeholder="Ej: mi perro vomita y tiene fiebre desde ayer..."></textarea>
-  </label>
-
-  <label class="checkbox">
-    <input type="checkbox" name="acepta_terminos_triage" required>
-    Acepto que esta orientación es un triaje preliminar y no sustituye un diagnóstico veterinario.
-  </label>
-
-  <button type="submit" class="btn btn-primary">Enviar consulta</button>
-</form>
+{% if not mascotas %}
+<div class="card empty-state">
+  <h2>Primero registra una mascota</h2>
+  <p>Necesitas al menos una mascota para poder iniciar un triaje.</p>
+  <a class="btn" href="{{ url_for('mascotas.nueva', next='triaje') }}">
+    <svg class="i" aria-hidden="true"><use href="#plus"/></svg>
+    Registrar mascota
+  </a>
+</div>
 {% else %}
-<p>Primero registra una mascota para poder iniciar un triaje.</p>
-<a class="btn btn-primary" href="{{ url_for('mascotas.nueva') }}">+ Nueva mascota</a>
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+  <div>
+    <h1>Triaje Virtual de Urgencia</h1>
+    <p>Evalúa el estado de tu mascota y recibe una orientación de gravedad antes de contactar al veterinario.</p>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('triaje.nueva') }}" class="form triaje-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="cols">
+      <div class="col">
+        <h3><svg class="i" aria-hidden="true"><use href="#paw"/></svg>Datos del Paciente</h3>
+
+        <div class="field">
+          <label for="mascota_id">Selecciona mascota <span class="req">*</span></label>
+          <select class="in" id="mascota_id" name="mascota_id" required>
+            <option value="">Selecciona una mascota</option>
+            {% for mascota in mascotas %}
+              <option value="{{ mascota.id }}" {% if mascota.id == mascota_preseleccionada %}selected{% endif %}>
+                {{ mascota.nombre }} ({{ mascota.especie }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="motivo">Describe el motivo de consulta</label>
+          <textarea class="in" id="motivo" name="motivo" rows="4" placeholder="Ej: vomita repetidamente, letargo, no come desde ayer…"></textarea>
+          <small class="hint">Describe en detalle lo que observas en tu mascota.</small>
+        </div>
+
+        <h3><svg class="i" aria-hidden="true"><use href="#clip"/></svg>Estado General</h3>
+
+        <div class="field estado-pregunta">
+          <label>¿Está consciente?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_consciente" value="si">
+              <span class="check-circle"></span>
+              Sí
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_consciente" value="no">
+              <span class="check-circle"></span>
+              No
+            </label>
+          </div>
+        </div>
+
+        <div class="field estado-pregunta">
+          <label>¿Puede caminar?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_caminar" value="si">
+              <span class="check-circle"></span>
+              Sí
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_caminar" value="no">
+              <span class="check-circle"></span>
+              No
+            </label>
+          </div>
+        </div>
+
+        <div class="field estado-pregunta">
+          <label>¿Cómo es su respiración?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_respiracion" value="normal">
+              <span class="check-circle"></span>
+              Normal
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_respiracion" value="dificil">
+              <span class="check-circle"></span>
+              Difícil
+            </label>
+          </div>
+        </div>
+
+        <div class="field estado-pregunta">
+          <label>¿Tiene heridas abiertas?</label>
+          <div class="opciones-siono">
+            <label class="opcion-siono">
+              <input type="radio" name="estado_heridas" value="si">
+              <span class="check-circle"></span>
+              Sí
+            </label>
+            <label class="opcion-siono">
+              <input type="radio" name="estado_heridas" value="no">
+              <span class="check-circle"></span>
+              No
+            </label>
+          </div>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" name="acepta_terminos_triage" required>
+          Acepto que esta orientación es un triaje preliminar y no sustituye un diagnóstico veterinario.
+        </label>
+      </div>
+
+      <div class="col">
+        <h3><svg class="i" aria-hidden="true"><use href="#alert"/></svg>Síntomas por Gravedad</h3>
+
+        <div class="grupo-sintomas urgente">
+          <div class="grupo-header">
+            <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+            <span>Graves / Emergencia</span>
+          </div>
+          <div class="opciones-lista">
+            {% for clave, etiqueta in sintomas_predefinidos['Urgente'] %}
+            <label class="opcion-item">
+              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+              <span class="opcion-check"></span>
+              <span class="opcion-texto">{{ etiqueta }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="grupo-sintomas moderado">
+          <div class="grupo-header">
+            <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+            <span>Moderados / Urgencia</span>
+          </div>
+          <div class="opciones-lista">
+            {% for clave, etiqueta in sintomas_predefinidos['Moderado'] %}
+            <label class="opcion-item">
+              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+              <span class="opcion-check"></span>
+              <span class="opcion-texto">{{ etiqueta }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="grupo-sintomas leve">
+          <div class="grupo-header">
+            <svg class="i" aria-hidden="true"><use href="#check"/></svg>
+            <span>Leves / No Urgentes</span>
+          </div>
+          <div class="opciones-lista">
+            {% for clave, etiqueta in sintomas_predefinidos['Leve'] %}
+            <label class="opcion-item">
+              <input type="checkbox" name="sintomas_predefinidos" value="{{ clave }}">
+              <span class="opcion-check"></span>
+              <span class="opcion-texto">{{ etiqueta }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">
+        <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+        Evaluar Gravedad y Contactar Veterinario
+      </button>
+    </div>
+  </form>
+</div>
+
+<div class="triaje-footer">
+  <div class="info-box">
+    <svg class="i" aria-hidden="true"><use href="#alert"/></svg>
+    <div>
+      <strong>Por favor, responde con calma.</strong>
+      Si es una emergencia vital, te contactaremos con un veterinario de inmediato.
+    </div>
+  </div>
+</div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var form = document.querySelector('.triaje-form');
+    var btnFinal = document.querySelector('.triaje-form .btn-primary');
+
+    if (!form || !btnFinal) return;
+
+    btnFinal.disabled = false;
+
+    form.addEventListener('submit', function (e) {
+      var checkboxes = form.querySelectorAll('input[name="sintomas_predefinidos"]');
+      var radios = form.querySelectorAll('input[type="radio"]');
+      var motivo = document.getElementById('motivo');
+
+      var haySintomas = Array.prototype.some.call(checkboxes, function (cb) { return cb.checked; });
+      var hayRadios = Array.prototype.some.call(radios, function (r) { return r.checked; });
+      var hayMotivo = motivo && motivo.value.trim().length > 0;
+
+      if (!haySintomas && !hayRadios && !hayMotivo) {
+        e.preventDefault();
+        alert('Por favor, selecciona al menos un síntoma, responde una pregunta o escribe un motivo antes de continuar.');
+        btnFinal.disabled = false;
+      }
+    });
+  })();
+</script>
 {% endblock %}

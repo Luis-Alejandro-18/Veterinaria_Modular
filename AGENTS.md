@@ -33,7 +33,7 @@ Python 3.10+, Flask, Flask-SQLAlchemy, Flask-WTF, GeoAlchemy2, PostgreSQL + Post
 - Mascotas: `/mascotas/` (listar, crear, ver, editar, eliminar).
 - Triaje: `/triaje/` (crear consulta, evidencia, respuesta, cambio de estado). Urgencia por reglas de palabras clave; el veterinario queda asignado al responder. El detalle muestra una guía de primeros auxilios según la urgencia; las transiciones de estado están en `constants.py` y una consulta cerrada no acepta respuestas ni evidencias.
 - Evidencias: `GET /triaje/evidencia/<id>` sirve archivos privados solo al dueño de la mascota o a un veterinario autenticado.
-- Mapa: `/mapa` (Leaflet), `/clinicas`, `/clinicas/cercanas?lat=&lng=&radio=` (PostGIS).
+- Mapa: `/mapa` (Leaflet) y `/clinicas/reales?lat=&lng=&radio=` (Overpass/OpenStreetMap, solo clínicas reales, caché en memoria 10 min). Sin fallback a la BD local.
 
 ## Datos de ejemplo
 - `python seed_clinicas.py` carga 12 clínicas ficticias del AMG; `--force` las recarga.

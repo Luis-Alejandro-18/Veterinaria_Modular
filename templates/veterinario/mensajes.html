@@ -1,0 +1,85 @@
+{% extends 'veterinario/base_vet.html' %}
+{% from 'veterinario/_macros.html' import estado_class, urgencia_class %}
+
+{% block title %}Mensajes — Panel veterinario{% endblock %}
+
+{% block content %}
+<div class="vet-head">
+  <div>
+    <h1>Mensajes</h1>
+    <p>Conversaciones con los dueños de los casos que ya tomaste.</p>
+  </div>
+  <div class="vet-head-actions">
+    <a class="btn ghost" href="{{ url_for('veterinario.bandeja') }}">
+      <svg class="i" aria-hidden="true"><use href="#inbox"/></svg>
+      Ir a Solicitudes
+    </a>
+  </div>
+</div>
+
+<div class="vet-messages">
+  <section class="vet-thread-list" aria-label="Conversaciones">
+    <div class="vet-thread-list-head">Conversaciones</div>
+    {% if hilos %}
+      {% for hilo in hilos %}
+      <a class="vet-thread {% if seleccionada and seleccionada.id == hilo.consulta.id %}on{% endif %}"
+         href="{{ url_for('veterinario.mensajes', consulta_id=hilo.consulta.id) }}">
+        <span class="vet-thread-top">
+          <b>{{ hilo.consulta.mascota.nombre }} · {{ hilo.consulta.mascota.dueno.nombre }}</b>
+          <time>{% if hilo.ultimo %}{{ hilo.ultimo.fecha_envio|local_time('%d/%m') }}{% endif %}</time>
+        </span>
+        <span class="vet-thread-preview">
+          {% if hilo.ultimo %}
+            {% if hilo.ultimo.remitente_id == usuario_actual.id %}Tú: {% else %}Dueño: {% endif %}
+            {{ hilo.ultimo.mensaje|truncate(64, True) }}
+          {% else %}
+            Sin mensajes todavía. Abre la conversación para iniciar.
+          {% endif %}
+        </span>
+        <span class="vet-thread-bottom">
+          <span>Caso #{{ hilo.consulta.id }} · {{ hilo.consulta.estado }}</span>
+          {% if hilo.no_leidos %}
+            <span class="vet-unread" aria-label="{{ hilo.no_leidos }} sin leer">{{ hilo.no_leidos }}</span>
+          {% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    {% else %}
+      <div class="vet-empty">
+        <p>Aún no has tomado ningún caso. Ve a Solicitudes para tomar uno y conversar con el dueño.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if seleccionada %}
+  <section class="vet-conv" aria-label="Conversación con {{ seleccionada.mascota.dueno.nombre }}">
+    <div class="vet-conv-head">
+      <div>
+        <h2>{{ seleccionada.mascota.nombre }} — {{ seleccionada.mascota.dueno.nombre }}</h2>
+        <p>Caso #{{ seleccionada.id }} · {{ seleccionada.mascota.especie }} · {{ seleccionada.mascota.dueno.email }}</p>
+      </div>
+      <div class="vet-head-actions">
+        <span class="vet-pill {{ estado_class(seleccionada.estado) }}">{{ seleccionada.estado }}</span>
+        <a class="btn ghost sm" href="{{ url_for('veterinario.caso', consulta_id=seleccionada.id) }}">Ver caso</a>
+      </div>
+    </div>
+    {% set volver = 'mensajes' %}
+    {% set consulta = seleccionada %}
+    {% include 'veterinario/_conversacion.html' %}
+  </section>
+  {% else %}
+  <section class="vet-conv" aria-label="Selecciona una conversación">
+    <div class="vet-conv-empty">
+      <div>
+        <svg class="i" aria-hidden="true" style="width:44px;height:44px;color:var(--paw)"><use href="#message"/></svg>
+        <p>Selecciona una conversación de la lista para leer y responder al dueño.</p>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}" defer></script>
+{% endblock %}

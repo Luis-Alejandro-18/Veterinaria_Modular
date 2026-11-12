@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat — Consulta {{ consulta.id }} — Vet en un Click{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+  <div>
+    <h1>Chat de consulta #{{ consulta.id }}</h1>
+    <p>{{ consulta.mascota.nombre }} — {{ consulta.mascota.dueno.nombre }}</p>
+  </div>
+  <a class="btn" href="{{ url_for('triaje.detalle', consulta_id=consulta.id) }}">
+    <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+    Volver al detalle
+  </a>
+</div>
+
+<div class="card">
+  <div class="chat-messages" id="chat-messages"
+       data-estilo="dueno"
+       data-rol="{{ g.usuario.rol }}"
+       data-desde-id="{{ mensajes[-1].id if mensajes else 0 }}"
+       data-endpoint="{{ url_for('chat_api.mensajes', consulta_id=consulta.id) }}"
+       data-enviar="{{ url_for('chat_api.enviar', consulta_id=consulta.id) }}"
+       data-leido="{{ url_for('chat_api.marcar_leido', consulta_id=consulta.id) }}">
+    {% for mensaje in mensajes %}
+    <div class="chat-message {% if mensaje.remitente_id == g.usuario.id %}chat-message-own{% else %}chat-message-theirs{% endif %}"
+         data-id="{{ mensaje.id }}">
+      <div class="chat-message-sender">
+        {{ mensaje.remitente.nombre }}
+        <small>{{ mensaje.fecha_envio|local_time('%H:%M') }}</small>
+      </div>
+      <div class="chat-message-body">{{ mensaje.mensaje }}</div>
+    </div>
+    {% else %}
+    <div class="empty-state" id="chat-empty">
+      <p>Aún no hay mensajes en esta consulta.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <button type="button" class="btn ghost sm" id="chat-nuevos" hidden>Nuevos mensajes ↓</button>
+
+  <form method="post" action="{{ url_for('triaje.chat_enviar', consulta_id=consulta.id) }}"
+        class="chat-form" id="chat-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <textarea class="in" name="mensaje" rows="3" maxlength="4000"
+                placeholder="Escribe un mensaje… (Enter para enviar)" required></textarea>
+    </div>
+    <div class="actions">
+      <button type="submit" class="btn">Enviar</button>
+    </div>
+  </form>
+  <p class="hint" id="chat-status" aria-live="polite"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}" defer></script>
+{% endblock %}

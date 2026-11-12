@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro de Veterinario — Vet en un Click{% endblock %}
+
+{% block content %}
+<div class="card auth-card">
+  <div class="page-head">
+    <svg class="i" aria-hidden="true"><use href="#shield"/></svg>
+    <div>
+      <h1>Registro — Veterinario</h1>
+      <p>Regístrate para atender consultas de triaje y tomar casos disponibles.</p>
+    </div>
+  </div>
+
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="field">
+      <label for="nombre">Nombre</label>
+      <input class="in" id="nombre" type="text" name="nombre" autocomplete="name" required>
+    </div>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input class="in" id="email" type="email" name="email" autocomplete="email" required>
+    </div>
+
+    <div class="field">
+      <label for="password">Contraseña</label>
+      <input class="in" id="password" type="password" name="password" autocomplete="new-password" minlength="6" required>
+      <small class="hint">Mínimo 6 caracteres.</small>
+    </div>
+
+    <div class="field">
+      <label for="cedula_profesional">Cédula profesional <span class="req">*</span></label>
+      <input class="in" id="cedula_profesional" type="text" name="cedula_profesional" required>
+      <small class="hint">Número de cédula profesional veterinaria.</small>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn">Registrarme como veterinario</button>
+    </div>
+  </form>
+
+  <p class="hint">¿Ya tienes cuenta? <a href="{{ url_for('auth.login', perfil='veterinario') }}">Inicia sesión en el panel veterinario</a>.</p>
+</div>
+{% endblock %}

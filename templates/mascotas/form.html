@@ -1,38 +1,82 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if mascota %}Editar mascota{% else %}Nueva mascota{% endif %} — Veterinaria Modular{% endblock %}
+{% block title %}{% if mascota %}Editar mascota{% else %}Nueva mascota{% endif %} — Vet en un Click{% endblock %}
 
 {% block content %}
-<h1>{% if mascota %}Editar mascota{% else %}Nueva mascota{% endif %}</h1>
+{% set cancel_url = url_for('mascotas.detalle', mascota_id=mascota.id) if mascota else url_for('mascotas.lista') %}
 
-<form method="post" class="form">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <label>Nombre
-    <input type="text" name="nombre" required value="{{ mascota.nombre if mascota else '' }}">
-  </label>
+<div class="page-head">
+  <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+  <div>
+    <h1>{% if mascota %}Editar mascota{% else %}Nueva mascota{% endif %}</h1>
+    <p>Completa la información básica y los datos clínicos.</p>
+  </div>
+  <a class="btn ghost" href="{{ cancel_url }}">
+    <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+    Volver
+  </a>
+</div>
 
-  <label>Especie
-    <input type="text" name="especie" required placeholder="Perro, Gato..." value="{{ mascota.especie if mascota else '' }}">
-  </label>
+<div class="card">
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
 
-  <label>Raza
-    <input type="text" name="raza" value="{{ mascota.raza or '' if mascota else '' }}">
-  </label>
+    {% if mostrar_aviso_triaje %}
+    <div class="flash flash-info" style="margin-bottom: 16px;">
+      <strong>Registra tu mascota para continuar con el triaje.</strong>
+      Una vez creada, volverás al formulario de triaje con ella ya seleccionada.
+    </div>
+    {% endif %}
 
-  <label>Edad (años)
-    <input type="number" name="edad_anios" min="0" value="{{ mascota.edad_anios or '' if mascota else '' }}">
-  </label>
+    <div class="cols">
+      <div class="col">
+        <h3><svg class="i" aria-hidden="true"><use href="#paw"/></svg>Datos básicos</h3>
 
-  <label>Peso (kg)
-    <input type="number" name="peso_kg" min="0" step="0.1" value="{{ mascota.peso_kg or '' if mascota else '' }}">
-  </label>
+        <div class="field">
+          <label for="nombre">Nombre <span class="req">*</span></label>
+          <input class="in" id="nombre" type="text" name="nombre" required value="{{ mascota.nombre if mascota else '' }}">
+        </div>
 
-  <label>Condiciones previas
-    <textarea name="condiciones_previas" rows="3">{{ mascota.condiciones_previas or '' if mascota else '' }}</textarea>
-  </label>
+        <div class="field">
+          <label for="especie">Especie <span class="req">*</span></label>
+          <input class="in" id="especie" type="text" name="especie" required placeholder="Perro, Gato..." value="{{ mascota.especie if mascota else '' }}">
+        </div>
 
-  <button type="submit" class="btn btn-primary">
-    {% if mascota %}Guardar cambios{% else %}Registrar mascota{% endif %}
-  </button>
-</form>
+        <div class="field">
+          <label for="raza">Raza</label>
+          <input class="in" id="raza" type="text" name="raza" value="{{ (mascota.raza or '') if mascota else '' }}">
+        </div>
+      </div>
+
+      <div class="col">
+        <h3><svg class="i" aria-hidden="true"><use href="#clip"/></svg>Datos clínicos</h3>
+
+        <div class="field">
+          <label for="edad_anios">Edad (años)</label>
+          <input class="in" id="edad_anios" type="number" name="edad_anios" min="0" value="{{ (mascota.edad_anios or '') if mascota else '' }}">
+        </div>
+
+        <div class="field">
+          <label for="peso_kg">Peso (kg)</label>
+          <input class="in" id="peso_kg" type="number" name="peso_kg" min="0" step="0.1" value="{{ (mascota.peso_kg or '') if mascota else '' }}">
+        </div>
+
+        <div class="field">
+          <label for="condiciones_previas">Condiciones previas</label>
+          <textarea class="in" id="condiciones_previas" name="condiciones_previas" rows="3">{{ (mascota.condiciones_previas or '') if mascota else '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn ghost" href="{{ cancel_url }}">Cancelar</a>
+      <button type="submit" class="btn">
+        {% if mascota %}Guardar cambios{% else %}Registrar mascota{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
 {% endblock %}

@@ -1,20 +1,76 @@
 {% extends 'base.html' %}
 
-{% block title %}Inicio — Veterinaria Modular{% endblock %}
+{% block title %}Inicio — Vet en un Click{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <h1>Emergencias veterinarias, orientadas a tiempo</h1>
-  <p>Triaje digital, primeros auxilios y clínicas 24/7 en el Área Metropolitana de Guadalajara.</p>
+<section class="hero view">
+  <svg class="hero-paw i" style="top:90px;right:44%;transform:rotate(-12deg)" aria-hidden="true"><use href="#paw"/></svg>
+  <svg class="hero-paw i" style="top:60px;right:30px;transform:rotate(18deg)" aria-hidden="true"><use href="#paw"/></svg>
+  <svg class="hero-paw i" style="top:56%;left:42%;transform:rotate(14deg)" aria-hidden="true"><use href="#paw"/></svg>
 
-  <div class="actions">
-    {% if usuario_actual %}
-      <a class="btn btn-primary" href="{{ url_for('triaje.nueva') }}">Iniciar triaje</a>
-      <a class="btn" href="{{ url_for('mapa.mapa') }}">Ver clínicas cercanas</a>
-    {% else %}
-      <a class="btn btn-primary" href="{{ url_for('auth.registro') }}">Crear cuenta</a>
-      <a class="btn" href="{{ url_for('auth.login') }}">Iniciar sesión</a>
-    {% endif %}
+  <div class="hero-grid">
+    <div>
+      <h1>Vet en un <em>Click</em></h1>
+      <p class="lead">Tu aliado en el cuidado de tu mascota</p>
+      <p class="sub">Reporta el malestar de tu mascota de forma rápida, adjunta evidencia y recibe seguimiento de tu caso.</p>
+
+      <div class="hero-actions">
+        {% if usuario_actual %}
+          <a class="btn big" href="{{ url_for('triaje.nueva') }}">
+            <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+            Reportar un caso →
+          </a>
+          <a class="btn ghost big" href="{{ url_for('mapa.mapa') }}">
+            <svg class="i" aria-hidden="true"><use href="#pin"/></svg>
+            Clínicas 24/7
+          </a>
+        {% else %}
+          <a class="btn big" href="{{ url_for('auth.registro') }}">
+            <svg class="i" aria-hidden="true"><use href="#paw"/></svg>
+            Crear cuenta →
+          </a>
+          <a class="btn ghost big" href="{{ url_for('auth.login') }}">Iniciar sesión</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="pets" aria-hidden="true">
+      <svg viewBox="0 0 460 340" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60 300C20 200 60 80 190 60s250 10 250 140-60 120-120 120z" fill="var(--soft)"/>
+        <!-- perro -->
+        <ellipse cx="190" cy="310" rx="120" ry="70" fill="#e0a24a"/>
+        <ellipse cx="190" cy="300" rx="70" ry="50" fill="#f3d7a5"/>
+        <path d="M92 120c-34 6-44 70-28 110 8 18 26 14 32-6 8-28 8-76-4-104z" fill="#b8741f"/>
+        <path d="M288 120c34 6 44 70 28 110-8 18-26 14-32-6-8-28-8-76 4-104z" fill="#b8741f"/>
+        <ellipse cx="190" cy="165" rx="100" ry="98" fill="#e8ad55"/>
+        <ellipse cx="190" cy="205" rx="58" ry="46" fill="#f6dcae"/>
+        <ellipse cx="190" cy="178" rx="20" ry="14" fill="#2a1a22"/>
+        <circle cx="150" cy="145" r="10" fill="#2a1a22"/><circle cx="153" cy="141" r="3" fill="#fff"/>
+        <circle cx="230" cy="145" r="10" fill="#2a1a22"/><circle cx="233" cy="141" r="3" fill="#fff"/>
+        <path d="M168 205q22 20 44 0" fill="none" stroke="#2a1a22" stroke-width="4" stroke-linecap="round"/>
+        <path d="M178 208q12 34 24 0z" fill="#e8667a"/>
+        <!-- gato -->
+        <ellipse cx="350" cy="320" rx="80" ry="60" fill="#8a8794"/>
+        <path d="M296 170 290 112 336 146z" fill="#6f6c79"/><path d="M404 170l6-58-46 34z" fill="#6f6c79"/>
+        <path d="M300 160 298 126 328 148z" fill="#f0b6c0"/><path d="M400 160l2-34-30 22z" fill="#f0b6c0"/>
+        <ellipse cx="350" cy="200" rx="64" ry="58" fill="#9a97a4"/>
+        <path d="M350 146v28M330 150l6 22M370 150l-6 22" stroke="#5e5b68" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="350" cy="228" rx="30" ry="22" fill="#e9e5ee"/>
+        <ellipse cx="326" cy="200" rx="10" ry="12" fill="#c8d96a"/><ellipse cx="374" cy="200" rx="10" ry="12" fill="#c8d96a"/>
+        <ellipse cx="326" cy="200" rx="3.5" ry="9" fill="#2a1a22"/><ellipse cx="374" cy="200" rx="3.5" ry="9" fill="#2a1a22"/>
+        <path d="M343 218h14l-7 8z" fill="#e58a9b"/>
+        <path d="M350 226q-8 10-18 6M350 226q8 10 18 6" fill="none" stroke="#5e5b68" stroke-width="3" stroke-linecap="round"/>
+        <path d="M322 222l-34-6M322 230l-32 8M378 222l34-6M378 230l32 8" stroke="#d9d5df" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
   </div>
+
+  <div class="features">
+    <div class="feat"><svg class="i" aria-hidden="true"><use href="#bolt"/></svg><div><b>Rápido y sencillo</b><span>Reporta en minutos</span></div></div>
+    <div class="feat"><svg class="i" aria-hidden="true"><use href="#shield"/></svg><div><b>Seguimiento en línea</b><span>Conoce el estado de tu caso</span></div></div>
+    <div class="feat"><svg class="i" aria-hidden="true"><use href="#heart"/></svg><div><b>Cuidado profesional</b><span>Con el respaldo de veterinarios</span></div></div>
+  </div>
+
+  <svg class="wave" viewBox="0 0 1000 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30C160 0 320 10 500 30s340 30 500 0v40H0z"/></svg>
 </section>
 {% endblock %}

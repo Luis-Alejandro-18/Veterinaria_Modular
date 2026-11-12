@@ -77,12 +77,19 @@ from routes.auth import auth_bp
 from routes.mascotas import mascotas_bp
 from routes.triaje import triaje_bp
 from routes.mapa import mapa_bp
-from routes.utils import load_logged_in_user
+from routes.main import main_bp
+from routes.veterinario import veterinario_bp
+from routes.chat_api import chat_api_bp
+from routes.utils import (load_logged_in_user, mensajes_sin_leer_para,
+                          solicitudes_disponibles_para)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(mascotas_bp)
 app.register_blueprint(triaje_bp)
 app.register_blueprint(mapa_bp)
+app.register_blueprint(main_bp)
+app.register_blueprint(veterinario_bp)
+app.register_blueprint(chat_api_bp)
 
 
 @app.before_request
@@ -99,7 +106,12 @@ def before_request():
 
 @app.context_processor
 def inject_usuario():
-    return {'usuario_actual': getattr(g, 'usuario', None)}
+    usuario = getattr(g, 'usuario', None)
+    return {
+        'usuario_actual': usuario,
+        'mensajes_sin_leer': mensajes_sin_leer_para(usuario),
+        'solicitudes_disponibles': solicitudes_disponibles_para(usuario),
+    }
 
 
 @app.route('/')

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2b1a73">
+  <title>Acceso veterinario — Vet en un Click</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/estilosGlobales.css') }}">
+</head>
+<body class="vet-body">
+  <a class="skip-link" href="#acceso">Saltar al formulario</a>
+  {% include '_sprite.html' %}
+
+  <div class="vet-login-split">
+    <section class="vet-login-hero">
+      <svg class="vet-login-paw vet-login-paw-a" aria-hidden="true"><use href="#paw"/></svg>
+      <svg class="vet-login-paw vet-login-paw-b" aria-hidden="true"><use href="#paw"/></svg>
+
+      <a class="vet-login-brand" href="{{ url_for('index') }}">
+        <svg aria-hidden="true"><use href="#paw"/></svg>
+        Vet en un Click
+      </a>
+
+      <div class="vet-login-headline">
+        <h1>Panel <span>veterinario</span></h1>
+        <p>Revisa los reportes de los dueños y responde con un diagnóstico claro.</p>
+      </div>
+
+      <div class="vet-login-points">
+        <div class="vet-login-point">
+          <div class="vet-login-point-icon" aria-hidden="true">
+            <svg class="i"><use href="#inbox"/></svg>
+          </div>
+          <div><b>Casos ordenados por urgencia</b>Atiende primero lo que no puede esperar.</div>
+        </div>
+        <div class="vet-login-point">
+          <div class="vet-login-point-icon" aria-hidden="true">
+            <svg class="i"><use href="#photo"/></svg>
+          </div>
+          <div><b>Fotos del dueño en el mismo lugar</b>Revisa la evidencia junto al reporte.</div>
+        </div>
+        <div class="vet-login-point">
+          <div class="vet-login-point-icon" aria-hidden="true">
+            <svg class="i"><use href="#check"/></svg>
+          </div>
+          <div><b>Respuesta directo al dueño</b>El diagnóstico llega al seguimiento del caso.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="vet-login-form" id="acceso">
+      <form method="post" action="{{ url_for('auth.login') }}" class="vet-login-box">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="perfil" value="veterinario">
+
+        <div>
+          <h1>Iniciar sesión</h1>
+          <p class="hint">Acceso exclusivo para el equipo veterinario.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-messages" aria-live="polite">
+              {% for category, message in messages %}
+                <div class="flash flash-{{ category }} vet-flash">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="field">
+          <label class="vet-label" for="email">Correo profesional</label>
+          <input class="in" id="email" type="email" name="email" autocomplete="email"
+                 placeholder="nombre@clinica.com" required>
+        </div>
+
+        <div class="field">
+          <label class="vet-label" for="password">Contraseña</label>
+          <input class="in" id="password" type="password" name="password"
+                 autocomplete="current-password" placeholder="Tu contraseña" required>
+        </div>
+
+        <label class="vet-login-check">
+          <input type="checkbox" name="mantener_sesion" checked>
+          Mantener sesión
+        </label>
+
+        <button type="submit" class="btn">
+          Entrar al panel
+          <svg class="i" aria-hidden="true"><use href="#arrow-right"/></svg>
+        </button>
+
+        <p class="vet-login-alt">¿Eres dueño de una mascota? <a href="{{ url_for('auth.login') }}">Ir al acceso de dueños</a></p>
+        <p class="vet-login-alt">¿No tienes cuenta? <a href="{{ url_for('auth.registro_veterinario') }}">Regístrate como veterinario</a></p>
+        <a class="vet-login-back" href="{{ url_for('index') }}">
+          <svg class="i" aria-hidden="true"><use href="#arrow-left"/></svg>
+          Volver al sitio
+        </a>
+      </form>
+    </section>
+  </div>
+</body>
+</html>

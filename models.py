@@ -75,7 +75,7 @@ class Consulta(db.Model):
 
     sintomas = db.Column(db.Text, nullable=False)
     nivel_urgencia = db.Column(db.String(20), nullable=True)  # 'Leve', 'Moderado', 'Urgente'
-    estado = db.Column(db.String(50), default='Pendiente')  # 'Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada'
+    estado = db.Column(db.String(50), default='Sin solicitar')  # 'Sin solicitar', 'Pendiente', 'En Atención', 'Requiere Presencial', 'Cerrada'
 
     # Seguro legal: el usuario acepta que esto es triaje, no un diagnóstico definitivo
     acepta_terminos_triage = db.Column(db.Boolean, nullable=False)
@@ -95,6 +95,25 @@ class Consulta(db.Model):
         cascade='all, delete-orphan',
     )
     veterinario = db.relationship('Usuario', backref='consultas_atendidas', lazy=True)
+    mensajes_chat = db.relationship(
+        'MensajeConsulta',
+        backref='consulta',
+        lazy=True,
+        cascade='all, delete-orphan',
+    )
+
+
+class MensajeConsulta(db.Model):
+    __tablename__ = 'mensajes_consulta'
+
+    id = db.Column(db.Integer, primary_key=True)
+    consulta_id = db.Column(db.Integer, db.ForeignKey('consultas.id'), nullable=False)
+    remitente_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    mensaje = db.Column(db.Text, nullable=False)
+    fecha_envio = db.Column(db.DateTime, default=utcnow)
+    leido = db.Column(db.Boolean, default=False)
+
+    remitente = db.relationship('Usuario', backref='mensajes_enviados', lazy=True)
 
 
 class Evidencia(db.Model):

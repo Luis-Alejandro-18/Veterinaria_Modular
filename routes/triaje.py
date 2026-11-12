@@ -1,5 +1,7 @@
 import mimetypes
 import os
+import re
+import unicodedata
 from uuid import uuid4
 
 from flask import (Blueprint, abort, current_app, flash, g, redirect,
@@ -8,11 +10,11 @@ from PIL import Image, UnidentifiedImageError
 from sqlalchemy import or_
 from werkzeug.utils import secure_filename
 
-from constants import (ESTADOS_CONSULTA, ESTADO_CERRADA, NIVELES_URGENCIA,
-                       TRANSICIONES_ESTADO)
+from constants import (ESTADO_CERRADA, ESTADO_SIN_SOLICITAR, ESTADOS_CONSULTA, NIVELES_URGENCIA,
+                       SINTOMAS_PREDEFINIDOS, TRANSICIONES_ESTADO)
 from data.primeros_auxilios import obtener_guia
-from models import Consulta, Evidencia, Mascota, RespuestaOrientacion, db
-from routes.utils import (login_required, puede_ver_consulta,
+from models import Consulta, Evidencia, Mascota, MensajeConsulta, RespuestaOrientacion, db
+from routes.utils import (componer_respuesta, login_required, puede_ver_consulta,
                           ruta_fisica_evidencia, veterinario_required)
 
 triaje_bp = Blueprint('triaje', __name__, url_prefix='/triaje')
@@ -20,24 +22,107 @@ triaje_bp = Blueprint('triaje', __name__, url_prefix='/triaje')
 EXTENSIONES_IMAGEN = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 EXTENSIONES_VIDEO = {'mp4', 'mov', 'avi', 'webm'}
 
+# Mapa clave -> etiqueta amigable para los síntomas predefinidos.
+SINTOMA_ETIQUETA = {}
+for _nivel, _sintomas in SINTOMAS_PREDEFINIDOS.items():
+    for _clave, _etiqueta in _sintomas:
+        SINTOMA_ETIQUETA[_clave] = _etiqueta
+
+# Mapa clave -> nivel de urgencia para los síntomas predefinidos.
+SINTOMA_NIVEL = {}
+for _nivel, _sintomas in SINTOMAS_PREDEFINIDOS.items():
+    for _clave, _etiqueta in _sintomas:
+        SINTOMA_NIVEL[_clave] = _nivel
+
+
+def _normalizar(texto):
+    """Pasa a minúsculas, quita acentos y colapsa espacios."""
+    if not texto:
+        return ''
+    texto = texto.lower()
+    texto = ''.join(
+        c for c in unicodedata.normalize('NFD', texto)
+        if unicodedata.category(c) != 'Mn'
+    )
+    return re.sub(r'\s+', ' ', texto).strip()
+
+
+# Expresiones regulares con límite de palabra para evitar falsos positivos
+# (p. ej. "tos" dentro de "vómitos"). Se aplican sobre texto ya normalizado.
 PALABRAS_URGENTES = [
-    'sangra', 'sangrado', 'convulsion', 'convulsión', 'no respira',
-    'dificultad para respirar', 'envenen', 'atropell', 'desmay',
-    'inconsciente', 'fractura', 'vomita sangre', 'parto',
+    r'\bsangr', r'\bhemorragi', r'\bveneno', r'\btoxico', r'\bintoxicaci',
+    r'\bconvuls', r'\bdesmay', r'\binconsciente', r'\bno respira',
+    r'\bdificultad para respirar', r'\bdificultad respir', r'\bcuesta respir',
+    r'\batropell', r'\baccidente', r'\bfractura', r'\bgolpe fuerte',
+    r'\bquemadura', r'\bparto', r'\bsangre en la heces',
+    r'\bherida abierta\b', r'\bherida grave\b', r'\bherida profunda\b',
+    r'\bno puede caminar',
 ]
 PALABRAS_MODERADAS = [
-    'vomita', 'diarrea', 'fiebre', 'cojea', 'dolor', 'hinchaz',
-    'letargo', 'no come', 'tos',
+    r'\bvomita', r'\bvomit', r'\bdiarrea', r'\bfiebre', r'\bcoje',
+    r'\bdolor', r'\bhinch\w*', r'\binflamaci', r'\bletargo', r'\bdecaed',
+    r'\bdecai', r'\bno come', r'\bno quiere comer', r'\btos\b',
+    r'\bherida\w*',  # herida genérica (no abierta/grave/profunda)
 ]
 
 
-def clasificar_urgencia(sintomas):
-    """Clasifica la urgencia con reglas simples por palabras clave."""
-    texto = sintomas.lower()
-    if any(palabra in texto for palabra in PALABRAS_URGENTES):
+@triaje_bp.before_request
+def _redirect_veterinarios_crear():
+    """Redirige a veterinarios de crear/listar triaje (solo atienden consultas)."""
+    if g.usuario and g.usuario.rol == 'veterinario':
+        endpoint = request.endpoint or ''
+        if endpoint in ('triaje.nueva', 'triaje.lista'):
+            flash('Los veterinarios atienden consultas desde la bandeja de casos.', 'error')
+            return redirect(url_for('veterinario.bandeja'))
+
+
+def _coincide(texto_norm, patrones):
+    return any(re.search(p, texto_norm) for p in patrones)
+
+
+def clasificar_urgencia(sintomas_texto, sintomas_predefinidos=None, estado_general=None):
+    """Clasifica la urgencia con reglas simples por palabras clave, síntomas predefinidos y estado general.
+
+    Args:
+        sintomas_texto: Texto libre de síntomas.
+        sintomas_predefinidos: Lista de claves de síntomas predefinidos seleccionados.
+        estado_general: Dict con respuestas del formulario de estado general.
+
+    Returns:
+        Uno de 'Urgente', 'Moderado', 'Leve'.
+    """
+    texto = _normalizar(sintomas_texto)
+    predefinidos = sintomas_predefinidos or []
+    estado = estado_general or {}
+
+    # Respuestas críticas del estado general que forzan Urgente.
+    if estado.get('estado_consciente') == 'no':
         return 'Urgente'
-    if any(palabra in texto for palabra in PALABRAS_MODERADAS):
+    if estado.get('estado_caminar') == 'no':
+        return 'Urgente'
+    if estado.get('estado_respiracion') == 'dificil':
+        return 'Urgente'
+    if estado.get('estado_heridas') == 'si':
+        return 'Urgente'
+
+    # Síntomas predefinidos: el nivel más grave gana.
+    for clave in predefinidos:
+        if SINTOMA_NIVEL.get(clave) == 'Urgente':
+            return 'Urgente'
+
+    # Palabras clave urgentes en el texto libre.
+    if _coincide(texto, PALABRAS_URGENTES):
+        return 'Urgente'
+
+    # Síntomas predefinidos moderados.
+    for clave in predefinidos:
+        if SINTOMA_NIVEL.get(clave) == 'Moderado':
+            return 'Moderado'
+
+    # Palabras clave moderadas en el texto libre.
+    if _coincide(texto, PALABRAS_MODERADAS):
         return 'Moderado'
+
     return 'Leve'
 
 
@@ -89,12 +174,47 @@ def nueva():
                 .order_by(Mascota.nombre)
                 .all())
 
+    # Si no hay mascotas registradas, guiar al usuario a crear una primero.
+    if not mascotas:
+        flash('Primero registra a tu mascota para poder iniciar un triaje.', 'info')
+        return redirect(url_for('mascotas.nueva', next='triaje'))
+
+    # mascota_id preseleccionada desde el registro de mascota.
+    preseleccionada = request.args.get('mascota_id', type=int)
+
     if request.method == 'POST':
         mascota_id = request.form.get('mascota_id')
-        sintomas = request.form.get('sintomas', '').strip()
+        motivo = request.form.get('motivo', '').strip()
+        sintomas_predefinidos = request.form.getlist('sintomas_predefinidos')
+        estado_consciente = request.form.get('estado_consciente', '')
+        estado_caminar = request.form.get('estado_caminar', '')
+        estado_respiracion = request.form.get('estado_respiracion', '')
+        estado_heridas = request.form.get('estado_heridas', '')
         acepta = request.form.get('acepta_terminos_triage') == 'on'
 
-        if not mascota_id or not sintomas or not acepta:
+        # Construir el texto de síntomas combinando motivo + predefinidos + estado general.
+        partes_sintomas = []
+        if motivo:
+            partes_sintomas.append('Motivo: ' + motivo)
+        if sintomas_predefinidos:
+            etiquetas = [SINTOMA_ETIQUETA.get(c, c) for c in sintomas_predefinidos]
+            partes_sintomas.append('Síntomas: ' + ', '.join(etiquetas))
+
+        estado_partes = []
+        if estado_consciente:
+            estado_partes.append(f'Consciente: {estado_consciente}')
+        if estado_caminar:
+            estado_partes.append(f'Camina: {estado_caminar}')
+        if estado_respiracion:
+            estado_partes.append(f'Respiración: {estado_respiracion}')
+        if estado_heridas:
+            estado_partes.append(f'Heridas abiertas: {estado_heridas}')
+        if estado_partes:
+            partes_sintomas.append('Estado general: ' + '; '.join(estado_partes))
+
+        sintomas_combinados = ' | '.join(partes_sintomas)
+
+        if not mascota_id or not sintomas_combinados or not acepta:
             flash('Selecciona una mascota, describe los síntomas y acepta los términos.', 'error')
             return redirect(url_for('triaje.nueva'))
 
@@ -103,11 +223,18 @@ def nueva():
             flash('No puedes crear una consulta para esa mascota.', 'error')
             return redirect(url_for('triaje.nueva'))
 
+        estado_general = {
+            'estado_consciente': estado_consciente,
+            'estado_caminar': estado_caminar,
+            'estado_respiracion': estado_respiracion,
+            'estado_heridas': estado_heridas,
+        }
+
         consulta = Consulta(
             mascota_id=mascota.id,
-            sintomas=sintomas,
-            nivel_urgencia=clasificar_urgencia(sintomas),
-            estado='Pendiente',
+            sintomas=sintomas_combinados,
+            nivel_urgencia=clasificar_urgencia(motivo, sintomas_predefinidos, estado_general),
+            estado=ESTADO_SIN_SOLICITAR,
             acepta_terminos_triage=True,
         )
         db.session.add(consulta)
@@ -115,7 +242,28 @@ def nueva():
         flash(f'Consulta creada. Nivel de urgencia: {consulta.nivel_urgencia}.', 'success')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
-    return render_template('triaje/form.html', mascotas=mascotas)
+    return render_template('triaje/form.html', mascotas=mascotas,
+                           sintomas_predefinidos=SINTOMAS_PREDEFINIDOS,
+                           mascota_preseleccionada=preseleccionada)
+
+
+@triaje_bp.route('/<int:consulta_id>/solicitar', methods=['POST'])
+@login_required
+def solicitar_asistencia(consulta_id):
+    """Pasa una consulta de 'Sin solicitar' a 'Pendiente' para que los veterinarios la vean."""
+    consulta = Consulta.query.get_or_404(consulta_id)
+    if consulta.mascota.usuario_id != g.usuario.id:
+        flash('No puedes solicitar asistencia de esta consulta.', 'error')
+        return redirect(url_for('triaje.lista'))
+
+    if consulta.estado != ESTADO_SIN_SOLICITAR:
+        flash('Esta consulta ya ha sido enviada a los veterinarios.', 'info')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    consulta.estado = 'Pendiente'
+    db.session.commit()
+    flash('Tu solicitud ha sido enviada. Un veterinario revisará el caso pronto.', 'success')
+    return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
 
 @triaje_bp.route('/<int:consulta_id>')
@@ -125,6 +273,8 @@ def detalle(consulta_id):
     if not puede_ver_consulta(consulta):
         flash('No tienes permiso para ver esta consulta.', 'error')
         return redirect(url_for('triaje.lista'))
+    if g.usuario.rol == 'veterinario':
+        return redirect(url_for('veterinario.caso', consulta_id=consulta.id))
     return render_template(
         'triaje/detalle.html',
         consulta=consulta,
@@ -167,6 +317,10 @@ def subir_evidencia(consulta_id):
 
     if consulta.estado == ESTADO_CERRADA:
         flash('No se puede subir evidencia a una consulta cerrada.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('Primero debes solicitar asistencia con un doctor antes de subir evidencia.', 'error')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
     archivo = request.files.get('archivo')
@@ -215,15 +369,22 @@ def responder(consulta_id):
         flash('No se puede responder una consulta cerrada.', 'error')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('No se puede responder una consulta que aún no ha sido enviada.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
     mensaje = request.form.get('mensaje', '').strip()
-    if not mensaje:
+    diagnostico = request.form.get('diagnostico', '').strip()
+    recomendaciones = request.form.get('recomendaciones', '').strip()
+    texto = componer_respuesta(diagnostico, recomendaciones, mensaje)
+    if not texto:
         flash('Escribe una respuesta antes de enviarla.', 'error')
         return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
 
     respuesta = RespuestaOrientacion(
         consulta_id=consulta.id,
         veterinario_id=g.usuario.id,
-        mensaje=mensaje,
+        mensaje=texto,
     )
     if consulta.veterinario_id is None:
         consulta.veterinario_id = g.usuario.id
@@ -239,7 +400,9 @@ def responder(consulta_id):
 def cambiar_estado(consulta_id):
     consulta = Consulta.query.get_or_404(consulta_id)
     nuevo_estado = request.form.get('estado')
-    if nuevo_estado not in ESTADOS_CONSULTA:
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('Una consulta sin solicitar no puede cambiar de estado directamente.', 'error')
+    elif nuevo_estado not in ESTADOS_CONSULTA:
         flash('Estado inválido.', 'error')
     elif nuevo_estado not in TRANSICIONES_ESTADO.get(consulta.estado, ()):
         flash(f'No se puede pasar de "{consulta.estado}" a "{nuevo_estado}".', 'error')
@@ -250,3 +413,54 @@ def cambiar_estado(consulta_id):
         db.session.commit()
         flash('Estado actualizado.', 'success')
     return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+
+@triaje_bp.route('/<int:consulta_id>/chat', methods=['GET'])
+@login_required
+def chat_historial(consulta_id):
+    """Historial de mensajes del chat de una consulta."""
+    consulta = Consulta.query.get_or_404(consulta_id)
+    if not puede_ver_consulta(consulta):
+        flash('No tienes permiso para ver esta consulta.', 'error')
+        return redirect(url_for('triaje.lista'))
+    if g.usuario.rol == 'veterinario':
+        return redirect(url_for('veterinario.chat', consulta_id=consulta.id))
+    mensajes = (MensajeConsulta.query
+                .filter_by(consulta_id=consulta.id)
+                .order_by(MensajeConsulta.fecha_envio.asc())
+                .all())
+    return render_template('triaje/chat_historial.html', consulta=consulta, mensajes=mensajes)
+
+
+@triaje_bp.route('/<int:consulta_id>/chat', methods=['POST'])
+@login_required
+def chat_enviar(consulta_id):
+    """Envía un mensaje al chat de una consulta."""
+    consulta = Consulta.query.get_or_404(consulta_id)
+    if not puede_ver_consulta(consulta):
+        flash('No tienes permiso para escribir en esta consulta.', 'error')
+        return redirect(url_for('triaje.lista'))
+    if consulta.estado == ESTADO_CERRADA:
+        flash('No se puede escribir en una consulta cerrada.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    if consulta.estado == ESTADO_SIN_SOLICITAR:
+        flash('Primero debes solicitar asistencia con un doctor antes de escribir en el chat.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    mensaje = request.form.get('mensaje', '').strip()
+    if not mensaje:
+        flash('Escribe un mensaje antes de enviarlo.', 'error')
+        return redirect(url_for('triaje.detalle', consulta_id=consulta.id))
+
+    nuevo_mensaje = MensajeConsulta(
+        consulta_id=consulta.id,
+        remitente_id=g.usuario.id,
+        mensaje=mensaje,
+    )
+    db.session.add(nuevo_mensaje)
+    db.session.commit()
+    flash('Mensaje enviado.', 'success')
+    if g.usuario.rol == 'veterinario':
+        return redirect(url_for('veterinario.chat', consulta_id=consulta.id))
+    return redirect(url_for('triaje.chat_historial', consulta_id=consulta.id))

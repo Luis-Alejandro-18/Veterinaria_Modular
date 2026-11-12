@@ -1,0 +1,44 @@
+<div class="vet-conv-body" id="chat-messages" aria-live="polite"
+     data-estilo="vet"
+     data-rol="{{ g.usuario.rol }}"
+     data-desde-id="{{ mensajes[-1].id if mensajes else 0 }}"
+     data-endpoint="{{ url_for('chat_api.mensajes', consulta_id=consulta.id) }}"
+     data-enviar="{{ url_for('chat_api.enviar', consulta_id=consulta.id) }}"
+     data-leido="{{ url_for('chat_api.marcar_leido', consulta_id=consulta.id) }}">
+  {% for mensaje in mensajes %}
+  <div class="vet-msg {% if mensaje.remitente_id == g.usuario.id %}own{% endif %}" data-id="{{ mensaje.id }}">
+    <div class="vet-msg-meta">
+      <span>{{ mensaje.remitente.nombre }}</span>
+      <span aria-hidden="true">·</span>
+      <span>{{ mensaje.fecha_envio|local_time('%d/%m %H:%M') }}</span>
+    </div>
+    <div class="vet-msg-body">{{ mensaje.mensaje }}</div>
+  </div>
+  {% else %}
+  <div class="vet-conv-empty" id="chat-empty">
+    <p>Aún no hay mensajes en este caso. Escribe el primero para iniciar el seguimiento.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<button type="button" class="btn ghost sm" id="chat-nuevos" hidden>Nuevos mensajes ↓</button>
+
+{% if consulta.estado != 'Cerrada' %}
+<form method="post" action="{{ url_for('veterinario.enviar_mensaje', consulta_id=consulta.id) }}"
+      class="vet-compose" id="chat-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="volver" value="{{ volver|default('chat') }}">
+  <div class="field">
+    <label class="vet-label" for="mensaje-{{ consulta.id }}">Mensaje para el dueño</label>
+    <textarea class="in" id="mensaje-{{ consulta.id }}" name="mensaje" rows="2" maxlength="4000"
+              placeholder="Escribe un mensaje… (Enter para enviar)" required></textarea>
+  </div>
+  <button type="submit" class="btn">
+    <svg class="i" aria-hidden="true"><use href="#send"/></svg>
+    Enviar
+  </button>
+</form>
+{% else %}
+<div class="vet-note">El caso está cerrado. Ya no se pueden enviar mensajes.</div>
+{% endif %}
+<p class="hint" id="chat-status" aria-live="polite"></p>

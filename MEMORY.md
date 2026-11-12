@@ -1,47 +1,49 @@
 # MEMORY.md — Veterinaria_Modular
 
-> Última actualización: 2026-11-02
+> Última actualización: 2026-11-10 (Fase 4 — mapa solo con clínicas reales de Overpass)
 > Lee este archivo al empezar una tarea y actualízalo al terminarla (máx. ~50 líneas).
 
 ## Estado actual
-- MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas; 12 clínicas demo y sin usuarios (resto vacío).
-- Entorno de referencia probado: PostgreSQL 17.11 + PostGIS 3.6.2 y Python 3.14; cada integrante crea su propio `.venv` y `.env`.
-- Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado) y mapa (Leaflet + PostGIS).
-- Fases 1 y 2 completadas: cascadas, `veterinario_id`, hora local, cédula sin bloqueo, seed, errores 404/413/500, primeros auxilios y estados validados.
-- Fase 3 completada: CSRF con Flask-WTF, evidencias privadas en `instance/uploads/` servidas por `/triaje/evidencia/<id>`, filtros y paginación en mascotas/triaje.
-- Tests: 13 smoke con `python -m pytest -q`; usan `veterinaria_db_test` y no tocan la BD de desarrollo.
-- Frontend básico con Jinja2 y `estilosGlobales.css`; `instance/uploads/` se crea al arrancar.
-- Repo Git en `origin/main` (Luis-Alejandro-18/Veterinaria_Modular); `main` protegida (PR obligatorio).
+- Rama activa: `feature/fase4-frontend` (Fase 4 completada).
+- MVP académico con Flask + SQLAlchemy + PostgreSQL/PostGIS. 6 tablas.
+- Endpoints en Blueprints (`routes/`): auth, mascotas (CRUD), triaje (consulta, evidencias, respuesta, estado, chat) y mapa (Leaflet + Overpass).
+- Mapa completado: solo clínicas reales vía Overpass API (OpenStreetMap), geolocalización automática, marcador de usuario, radio 2/5/10/20 km (default 5 km). Sin selector de origen ni fallback a BD local.
+- Registro separado completado: `/registro` (landing), `/registro/dueno`, `/registro/veterinario` (cédula obligatoria).
+- Vista veterinario tipo Uber completada: `/veterinario/login` (acceso propio con `?perfil=veterinario`), `/veterinario/bandeja`, `/veterinario/tablero`, `/veterinario/agenda`, `/veterinario/casos/<id>` (tomar, responder, cambiar estado y chat).
+- Bandeja de veterinario = cola de **solicitudes por tomar** (solo `Pendiente` sin veterinario). Al tomar un caso desaparece de la bandeja y pasa a Tablero/Agenda; cerrados y en revisión no aparecen. Menú renombrado a "Solicitudes" con badge de casos disponibles.
+- Sección **Mensajes** (antes "Mensajes a dueños"): solo muestra conversaciones de casos ya tomados por el veterinario (incluye cerrados como historial). El badge de no leídos cuenta solo esos casos. En Solicitudes, un contador marca los mensajes previos del dueño antes de tomar el caso.
+- Chat bidireccional sin recargas: API JSON `/api/consultas/<id>/mensajes` (GET/POST) y `/leido`, con polling cada 2.5 s (`static/js/chat.js`). Envío optimista, auto-scroll, Enter para enviar, pausa al ocultar la pestaña y CSRF por header `X-CSRFToken`. Sin dependencias nuevas.
+- Chat de seguimiento completado: modelo MensajeConsulta, GET/POST /triaje/<id>/chat, historial y chat rápido en detalle.
+
+## Triaje Virtual (estado actual)
+- Formulario rediseñado: tarjeta única de dos columnas (datos del paciente + estado general a la izquierda; síntomas por gravedad a la derecha), sin indicador de "Paso 1 de 3".
+- Flujo para usuarios nuevos: si no hay mascotas registradas, `/triaje/nueva` redirige a `/mascotas/nueva?next=triaje`; tras crear la mascota, vuelve al triaje con la mascota preseleccionada (`?mascota_id=<id>`). El parámetro `next` solo acepta `'triaje'` (evita open redirect).
+- Botón "Evaluar Gravedad y Contactar Veterinario" funcional: validación en `submit`, siempre habilitado; alerta si no hay síntoma/radio/motivo.
+- Checkbox `acepta_terminos_triage` obligatorio (exigido por el backend y la BD).
+- Clasificación de urgencia corregida: normalización (minúsculas, sin acentos), límites de palabra (evita "tos" dentro de "vómitos"), estado general crítico → Urgente, predefinidos urgentes/moderados/leves, clasifica solo el `motivo` como texto libre (no el texto combinado) para evitar falsos positivos como "Heridas abiertas: no", regla de herida refinada ("herida abierta/grave/profunda" = Urgente, "herida" genérica = Moderado). Matriz de 38 casos: 38/38 correctos.
+- Se guardan etiquetas amigables (no claves) en `Consulta.sintomas`.
+- Nuevo estado `Sin solicitar` al crear una consulta: el dueño ve clasificación + guía de primeros auxilios + botón "Solicitar asistencia con un doctor". Evidencias, respuestas del veterinario y chat quedan ocultos hasta solicitar. Al solicitar pasa a `Pendiente` y aparece en la bandeja veterinaria. Veterinarios no ven ni pueden tomar consultas `Sin solicitar`.
+- Chat de seguimiento: tras enviar un mensaje, vuelve al historial de chat (no sale de la conversación).
 
 ## Decisiones (y por qué)
-- SQLAlchemy como única vía de conexión; `legacy/database.py` no se usa.
-- `db.create_all()` sin migraciones: el esquema actual alcanza para el MVP.
-- PostGIS SRID 4326 para clínicas; Leaflet sin API key.
-- Blueprints por módulo para trabajar en paralelo.
-- Sesiones Flask + `werkzeug.security` para auth.
-- Urgencia por reglas de palabras clave (MVP).
-- Cédula obligatoria para veterinarios, pero sin verificación ni bloqueo de login (MVP).
-- Borrado total en cascada (MVP); no se conserva historial.
-- Clínicas por seed (`seed_clinicas.py`); sin CRUD de admin por ahora.
-- Zona horaria: se guarda UTC naive y se muestra en `America/Mexico_City` (fallback UTC-6).
-- Primeros auxilios en `data/primeros_auxilios.py`; contenido orientativo, no diagnóstico.
-- Estados y transiciones centralizados en `constants.py`; una consulta cerrada es terminal.
-- CSRF con Flask-WTF en todos los POST; evidencias fuera de `static/` y con autorización por dueño/veterinario.
-- Filtros/paginación de 10 elementos por página para mantener el MVP simple.
-- PostgreSQL 17 + PostGIS 3.6: no hay versión de servidor fijada en el repo; el bundle de PostGIS debe coincidir con la versión mayor de PostgreSQL. Python 3.14 funciona con los pins actuales.
+- Overpass API (OpenStreetMap) sin clave de API; gratis y sin registro.
+- Endpoint único `GET /clinicas/reales?lat=&lng=&radio=` con consulta `nwr["amenity"="veterinary"](around:...)`. Si Overpass falla devuelve 503 con lista vacía; **nunca** consulta la BD local. Default de radio: 5000 m.
+- Consulta Overpass por GET con parámetro `data` + header User-Agent, timeout 60 s, varias instancias en paralelo (se usa la primera que responda) y caché en memoria de 10 min por lat/lng redondeadas + radio. Se soportan node/way/relation vía `out center`.
+- `urllib.request` de stdlib para no añadir dependencias.
+- `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
 
 ## Aprendizajes y errores a evitar
-- `app.py` falla silenciosamente si PostgreSQL/PostGIS no están disponibles: revisar consola.
-- La BD local varía por integrante (p. ej. 12 clínicas demo tras un seed limpio, sin usuarios); no asumir datos previos.
-- No editar `legacy/database.py`.
-- En PowerShell: `& "...\.venv\Scripts\python.exe" "script.py"`.
-- Evitar emojis en `print()` (cp1252 en Windows): usar `[OK]`/`[ERROR]`.
-- Los datos de `seed_clinicas.py` son ficticios; no usar en producción.
-- `pytest` reinicia solo `veterinaria_db_test`; no ejecutar pruebas contra `veterinaria_db`.
-- Los tests generales desactivan CSRF; el test dedicado usa `client_csrf`. Las evidencias de prueba van a `tmp_path`.
-- No servir evidencias desde `static/uploads/`: esa ruta está bloqueada.
-- Instalador EDB desatendido: `--enable-components server,commandlinetools` (pgadmin no es un nombre válido). PostGIS se copia desde el zip sobre `C:\Program Files\PostgreSQL\17`.
+- Overpass puede estar lento (30-50 s), devolver 502 o no responder; por eso hay mirror en paralelo, timeout amplio y caché. No reintroducir el fallback a BD local: mostraría datos que no son clínicas reales y ocultaría el fallo.
+- No añadir claves de API al repo.
+- Los tests generales desactivan CSRF; el test dedicado usa `client_csrf`.
+- Jinja2: verificar `{% block %}`/`{% endblock %}` balanceados y evitar `{% endif }` con espacio.
 
 ## Próximos pasos
-- Fase 4: frontend (diseño, dashboard, wizard, mapa, panel veterinario).
+- Navegación por rol: navbar condicional en base.html; veterinarios ven Solicitudes, Tablero y Mensajes (sin Clínicas, Mis mascotas, Triaje).
+- Opcional: historial de estados, cierre con motivo, notificaciones, prioridad manual, calificación, estadísticas.
 - Opcional: CI con PostgreSQL/PostGIS.
+
+## Tests
+- `tests/test_smoke.py`: 12 smoke tests + 4 tests del flujo sin mascotas + 5 tests del flujo sin solicitar + 3 tests de bandeja + 3 tests de mensajes + 8 tests de la API de chat + 4 tests del mapa real (mapeo node/way/relation, sin fallback local, validación de parámetros, caché).
+- `tests/test_triaje.py`: nuevo, 38 casos parametrizados de `clasificar_urgencia` (incluye tu caso reportado: diarrea + tos + no come → Moderado) + 2 unitarios de mapas.
+- Total: 90 passed, 0 failed.
